@@ -27,9 +27,9 @@ class SpeciesCounterGUI:
 
         self.root.mainloop()
 
-    #############
-    # INTERFACE #
-    #############
+    #####################
+    # INTERFACE METHODS #
+    #####################
 
     def load_styles(self):
         self.style = ttk.Style(self.root)
@@ -87,19 +87,27 @@ class SpeciesCounterGUI:
             'Latitude': 150,
             'Longitude': 150
         }
-        self.tree = ttk.Treeview(self.tree_frame, show='headings', columns=list(self.col_widths.keys()), height=13)
+        self.tree = ttk.Treeview(self.tree_frame, show='headings', columns=list(self.col_widths.keys()), height=15)
+        self.tree.grid(row=0, column=0)
 
+        self.tree_xscroll = ttk.Scrollbar(self.tree_frame, orient='horizontal', command=self.tree.xview)
+        self.tree_xscroll.grid(row=1, column=0, sticky='ew')
+        self.tree_yscroll = ttk.Scrollbar(self.tree_frame, orient='vertical', command=self.tree.yview)
+        self.tree_yscroll.grid(row=0, column=1, sticky='ns')
+
+        self.tree.configure(xscrollcommand=self.tree_xscroll.set, yscrollcommand=self.tree_yscroll.set)
+
+        self.create_csv()
+
+    #####################
+    # MECHANICS METHODS #
+    #####################
+
+    def reset_treeview(self):
         for heading, width in self.col_widths.items():
             self.tree.heading(heading, text=heading, anchor='w')
             self.tree.column(heading, width=width, anchor='w')
 
-        self.tree.pack()
-
-    ############
-    # COMMANDS #
-    ############
-
-    def reset_treeview(self):
         for item in self.tree.get_children():
             self.tree.delete(item)
 
