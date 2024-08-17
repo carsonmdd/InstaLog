@@ -1,7 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
-from tkinter import filedialog
-from tkinter import font
+from tkinter import ttk, filedialog, messagebox
 
 import csv
 import os
@@ -14,8 +12,8 @@ class SpeciesCounterGUI:
         self.create_root()
 
         self.style = ttk.Style(self.root)
-        self.csv_created = False
         self.csv_filepath = None
+        self.has_unsaved_changes = False
 
         self.load_themes()
 
@@ -39,10 +37,22 @@ class SpeciesCounterGUI:
     def create_root(self):
         self.root = tk.Tk()
         self.root.title('Species Counter')
-
         self.make_grid_resizable(self.root, 1, 1)
+        self.root.protocol('WM_DELETE_WINDOW', self.ask_save_changes)
 
         self.root.focus_set()
+
+    def ask_save_changes(self):
+        if self.has_unsaved_changes:
+            response = messagebox.askyesnocancel('Save Changes', 
+                                                'You have unsaved changes. Do you want to save before exiting?')
+            if response is True:
+                self.save()
+                self.root.destroy()
+            elif response is False:
+                self.root.destroy()
+        else:
+            self.root.destroy()
 
     def load_themes(self):
         self.root.tk.call('source', 'forest-light.tcl')
@@ -68,7 +78,7 @@ class SpeciesCounterGUI:
         self.csv_widgets_frame.grid(row=0, column=0, sticky='nsew')
         self.make_grid_resizable(self.csv_widgets_frame, 5, 1)
 
-        self.create_button = ttk.Button(self.csv_widgets_frame, text='New CSV', command=self.new_csv)
+        self.create_button = ttk.Button(self.csv_widgets_frame, text='New CSV', command=self.reset_treeview)
         self.create_button.grid(row=0, column=0, padx=5, pady=5, sticky='nsew')
 
         self.load_button = ttk.Button(self.csv_widgets_frame, text='Load CSV', command=self.load_csv)
@@ -117,7 +127,7 @@ class SpeciesCounterGUI:
 
         self.tree.configure(xscrollcommand=self.tree_xscroll.set, yscrollcommand=self.tree_yscroll.set)
 
-        self.new_csv()
+        self.reset_treeview()
 
     #####################
     # MECHANICS METHODS #
@@ -137,16 +147,14 @@ class SpeciesCounterGUI:
         for item in self.tree.get_children():
             self.tree.delete(item)
 
-    def new_csv(self):
-        self.reset_treeview()
-        self.csv_created = True
+        self.csv_filepath = None
 
     def load_csv(self):
         self.reset_treeview()
 
-        file_path = filedialog.askopenfilename(filetypes=[('CSV files', '*.csv')])
-        if file_path:
-            with open(file_path) as file:
+        filepath = filedialog.askopenfilename(filetypes=[('CSV files', '*.csv')])
+        if filepath:
+            with open(filepath) as file:
                 csvFile = csv.reader(file)
                 headers = next(csvFile)
                 if headers == list(self.col_widths.keys()):
@@ -162,29 +170,32 @@ class SpeciesCounterGUI:
                 for row in csvFile:
                     self.tree.insert("", tk.END, values=row)
 
-            self.csv_file_path = file_path
+            self.csv_filepath = filepath
 
-        self.csv_created = False
         self.root.focus_set()
         
     def delete_last_row(self):
         if self.tree.get_children():
             last_item = self.tree.get_children()[-1]
             self.tree.delete(last_item)
+
+            self.has_unsaved_changes = True
     
     def save(self):
-        if self.csv_created:
+        if not self.csv_filepath:
             time = datetime.now().replace(microsecond=0)
             default_name = f'{time} Dotting.csv'
-            self.csv_file_path = filedialog.asksaveasfilename(initialfile=default_name,
+            self.csv_filepath = filedialog.asksaveasfilename(initialfile=default_name,
                                                      defaultextension='.csv', 
                                                      filetypes=[('CSV files', '*.csv')])
-        if self.csv_file_path:
-            with open(self.csv_file_path, 'w', newline='') as file:
+        if self.csv_filepath:
+            with open(self.csv_filepath, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(self.tree['columns'])
                 for row in self.tree.get_children():
                     writer.writerow(self.tree.item(row)['values'])
+
+        self.has_unsaved_changes = False
                         
     def toggle_theme(self):
         if self.theme_switch.instate(['selected']):
@@ -193,9 +204,9 @@ class SpeciesCounterGUI:
             self.style.theme_use('forest-dark')
 
     def load_hotkeys(self):
-        file_path = 'hot_keys.json'
+        filepath = 'hot_keys.json'
 
-        with open(file_path) as file:
+        with open(filepath) as file:
             self.hotkeys = json.load(file)
 
         self.last_key = ''
@@ -229,6 +240,8 @@ class SpeciesCounterGUI:
 
             self.last_key = ''
             self.digits = ''
+
+            self.has_unsaved_changes = True
 
 if __name__ == '__main__':
     SpeciesCounterGUI()
