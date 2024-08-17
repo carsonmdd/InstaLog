@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import filedialog
+from tkinter import font
 
 import csv
 import os
@@ -10,17 +11,16 @@ from datetime import datetime
 class SpeciesCounterGUI:
 
     def __init__(self):
-        self.root = tk.Tk()
-        self.root.title('Species Counter')
-        self.root.focus_set()
-
-        self.load_styles()
+        self.create_root()
+        self.load_themes()
 
         self.create_general_frame()
+
         self.create_widgets_frame()
         self.create_csv_tools()
         self.create_separator()
         self.create_theme_tool()
+
         self.create_tree_frame()
         self.create_treeview()
         self.load_hotkeys()
@@ -31,53 +31,70 @@ class SpeciesCounterGUI:
     # INTERFACE METHODS #
     #####################
 
-    def load_styles(self):
+    def create_root(self):
+        self.root = tk.Tk()
+        self.root.title('Species Counter')
+
         self.style = ttk.Style(self.root)
+
+        self.make_grid_resizable(self.root, 1, 1)
+
+        self.root.focus_set()
+
+    def load_themes(self):
         self.root.tk.call('source', 'forest-light.tcl')
         self.root.tk.call('source', 'forest-dark.tcl')
         self.style.theme_use('forest-dark')
 
     def create_general_frame(self):
         self.frame = ttk.Frame(self.root)
-        self.frame.pack()
+        self.frame.grid(row=0, column=0, sticky='nsew')
+        self.make_grid_resizable(self.frame, 1, 2)
 
     def create_widgets_frame(self):
         self.widgets_frame = ttk.Frame(self.frame)
-        self.widgets_frame.grid(row=0, column=0, padx=20, pady=10)
+        self.widgets_frame.grid(row=0, column=0, padx=20, pady=10, sticky='nsew')
+        self.make_grid_resizable(self.widgets_frame, 3, 1)
 
     def create_csv_tools(self):
-        self.csv_frame = ttk.LabelFrame(self.widgets_frame, text='CSV Tools')
-        self.csv_frame.grid(row=0, column=0, pady=10, sticky='ew')
+        self.csv_frame = ttk.LabelFrame(self.widgets_frame, text='CSV Tools', labelanchor='n')
+        self.csv_frame.grid(row=0, column=0, pady=10, sticky='nsew')
+        self.make_grid_resizable(self.csv_frame, 5, 1)
 
         self.csv_widgets_frame = ttk.Frame(self.csv_frame)
-        self.csv_widgets_frame.pack()
+        self.csv_widgets_frame.grid(row=0, column=0, sticky='nsew')
+        self.make_grid_resizable(self.csv_widgets_frame, 5, 1)
 
         self.create_button = ttk.Button(self.csv_widgets_frame, text='Create CSV', command=self.create_csv)
-        self.create_button.grid(row=0, column=0, padx=5, pady=5)
+        self.create_button.grid(row=0, column=0, padx=5, pady=5, sticky='nsew')
 
         self.load_button = ttk.Button(self.csv_widgets_frame, text='Load CSV', command=self.load_csv)
-        self.load_button.grid(row=1, column=0, padx=5, pady=5)
+        self.load_button.grid(row=1, column=0, padx=5, pady=5, sticky='nsew')
 
         self.csv_tools_separator = ttk.Separator(self.csv_widgets_frame)
         self.csv_tools_separator.grid(row=2, column=0, padx=5, pady=10, sticky='ew')
 
         self.delete_button = ttk.Button(self.csv_widgets_frame, text='Delete last row', command=self.delete_last_row)
-        self.delete_button.grid(row=3, column=0, padx=5, pady=5)
+        self.delete_button.grid(row=3, column=0, padx=5, pady=5, sticky='nsew')
 
         self.save_button = ttk.Button(self.csv_widgets_frame, text='Save', command=self.save)
-        self.save_button.grid(row=4, column=0, padx=5, pady=(5, 10))
+        self.save_button.grid(row=4, column=0, padx=5, pady=(5, 10), sticky='nsew')
 
     def create_separator(self):
         self.separator = ttk.Separator(self.widgets_frame)
-        self.separator.grid(row=2, column=0, padx=10, pady=(5, 15), sticky='ew')
+        self.separator.grid(row=1, column=0, padx=10, pady=(5, 15), sticky='ew')
 
     def create_theme_tool(self):
         self.theme_switch = ttk.Checkbutton(self.widgets_frame, text='Theme', style='Switch', command=self.toggle_theme)
-        self.theme_switch.grid(row=3, column=0, sticky='w')
+        self.theme_switch.grid(row=2, column=0, sticky='nsew')
 
     def create_tree_frame(self):
         self.tree_frame = ttk.Frame(self.frame)
-        self.tree_frame.grid(row=0, column=1, padx=(0, 20), pady=10)
+        self.tree_frame.grid(row=0, column=1, padx=(0, 20), pady=10, sticky='nsew')
+        self.tree_frame.grid_rowconfigure(0, weight=1)
+        self.tree_frame.grid_columnconfigure(0, weight=1)
+        self.tree_frame.grid_rowconfigure(1, weight=0)
+        self.tree_frame.grid_columnconfigure(1, weight=0)
     
     def create_treeview(self):
         self.col_widths = {
@@ -88,7 +105,7 @@ class SpeciesCounterGUI:
             'Longitude': 150
         }
         self.tree = ttk.Treeview(self.tree_frame, show='headings', columns=list(self.col_widths.keys()), height=15)
-        self.tree.grid(row=0, column=0)
+        self.tree.grid(row=0, column=0, sticky='nsew')
 
         self.tree_xscroll = ttk.Scrollbar(self.tree_frame, orient='horizontal', command=self.tree.xview)
         self.tree_xscroll.grid(row=1, column=0, sticky='ew')
@@ -103,6 +120,12 @@ class SpeciesCounterGUI:
     # MECHANICS METHODS #
     #####################
 
+    def make_grid_resizable(self, element, rows, cols):
+        for i in range(rows):
+            element.grid_rowconfigure(i, weight=1)
+        for i in range(cols):
+            element.grid_columnconfigure(i, weight=1)
+
     def reset_treeview(self):
         for heading, width in self.col_widths.items():
             self.tree.heading(heading, text=heading, anchor='w')
@@ -114,7 +137,7 @@ class SpeciesCounterGUI:
     def create_csv(self):
         self.reset_treeview()
         time = datetime.now().replace(microsecond=0)
-        self.file_path = os.path.join(os.path.expanduser('~'), f'Desktop/{time} Dotting.csv')
+        self.csv_file_path = os.path.join(os.path.expanduser('~'), f'Desktop/{time} Dotting.csv')
 
     def load_csv(self):
         self.reset_treeview()
@@ -137,7 +160,7 @@ class SpeciesCounterGUI:
                 for row in csvFile:
                     self.tree.insert("", tk.END, values=row)
 
-            self.file_path = file_path
+            self.csv_file_path = file_path
 
         self.root.focus_set()
         
@@ -147,8 +170,8 @@ class SpeciesCounterGUI:
             self.tree.delete(last_item)
     
     def save(self):
-        if self.file_path:
-            with open(self.file_path, 'w', newline='') as file:
+        if self.csv_file_path:
+            with open(self.csv_file_path, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(self.tree['columns'])
                 for row in self.tree.get_children():
