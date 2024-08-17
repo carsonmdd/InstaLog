@@ -12,6 +12,11 @@ class SpeciesCounterGUI:
 
     def __init__(self):
         self.create_root()
+
+        self.style = ttk.Style(self.root)
+        self.csv_created = False
+        self.csv_filepath = None
+
         self.load_themes()
 
         self.create_general_frame()
@@ -34,8 +39,6 @@ class SpeciesCounterGUI:
     def create_root(self):
         self.root = tk.Tk()
         self.root.title('Species Counter')
-
-        self.style = ttk.Style(self.root)
 
         self.make_grid_resizable(self.root, 1, 1)
 
@@ -65,7 +68,7 @@ class SpeciesCounterGUI:
         self.csv_widgets_frame.grid(row=0, column=0, sticky='nsew')
         self.make_grid_resizable(self.csv_widgets_frame, 5, 1)
 
-        self.create_button = ttk.Button(self.csv_widgets_frame, text='Create CSV', command=self.create_csv)
+        self.create_button = ttk.Button(self.csv_widgets_frame, text='New CSV', command=self.new_csv)
         self.create_button.grid(row=0, column=0, padx=5, pady=5, sticky='nsew')
 
         self.load_button = ttk.Button(self.csv_widgets_frame, text='Load CSV', command=self.load_csv)
@@ -114,7 +117,7 @@ class SpeciesCounterGUI:
 
         self.tree.configure(xscrollcommand=self.tree_xscroll.set, yscrollcommand=self.tree_yscroll.set)
 
-        self.create_csv()
+        self.new_csv()
 
     #####################
     # MECHANICS METHODS #
@@ -134,10 +137,9 @@ class SpeciesCounterGUI:
         for item in self.tree.get_children():
             self.tree.delete(item)
 
-    def create_csv(self):
+    def new_csv(self):
         self.reset_treeview()
-        time = datetime.now().replace(microsecond=0)
-        self.csv_file_path = os.path.join(os.path.expanduser('~'), f'Desktop/{time} Dotting.csv')
+        self.csv_created = True
 
     def load_csv(self):
         self.reset_treeview()
@@ -162,6 +164,7 @@ class SpeciesCounterGUI:
 
             self.csv_file_path = file_path
 
+        self.csv_created = False
         self.root.focus_set()
         
     def delete_last_row(self):
@@ -170,13 +173,19 @@ class SpeciesCounterGUI:
             self.tree.delete(last_item)
     
     def save(self):
+        if self.csv_created:
+            time = datetime.now().replace(microsecond=0)
+            default_name = f'{time} Dotting.csv'
+            self.csv_file_path = filedialog.asksaveasfilename(initialfile=default_name,
+                                                     defaultextension='.csv', 
+                                                     filetypes=[('CSV files', '*.csv')])
         if self.csv_file_path:
             with open(self.csv_file_path, 'w', newline='') as file:
                 writer = csv.writer(file)
                 writer.writerow(self.tree['columns'])
                 for row in self.tree.get_children():
                     writer.writerow(self.tree.item(row)['values'])
-
+                        
     def toggle_theme(self):
         if self.theme_switch.instate(['selected']):
             self.style.theme_use('forest-light')
