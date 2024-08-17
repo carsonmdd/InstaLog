@@ -2,9 +2,19 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
 import csv
-import os
+import os, sys
 import json
 from datetime import datetime
+
+def resource_path(relative_path):
+    '''Get absolute path to resource, works for dev and for PyInstaller'''
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath('.')
+
+    return os.path.join(base_path, relative_path)
 
 class SpeciesCounterGUI:
 
@@ -55,8 +65,8 @@ class SpeciesCounterGUI:
             self.root.destroy()
 
     def load_themes(self):
-        self.root.tk.call('source', 'forest-light.tcl')
-        self.root.tk.call('source', 'forest-dark.tcl')
+        self.root.tk.call('source', resource_path('themes/forest-light.tcl'))
+        self.root.tk.call('source', resource_path('themes/forest-dark.tcl'))
         self.style.theme_use('forest-dark')
 
     def create_general_frame(self):
@@ -204,7 +214,7 @@ class SpeciesCounterGUI:
             self.style.theme_use('forest-dark')
 
     def load_hotkeys(self):
-        filepath = 'hot_keys.json'
+        filepath = resource_path('hot_keys.json')
 
         with open(filepath) as file:
             self.hotkeys = json.load(file)
