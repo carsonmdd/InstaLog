@@ -40,7 +40,7 @@ namespace eval ttk::theme::forest-light {
             -insertwidth 1 \
             -insertcolor $colors(-fg) \
             -fieldbackground $colors(-selectbg) \
-            -font {TkDefaultFont 25} \
+            -font {TkDefaultFont 20} \
             -borderwidth 1 \
             -relief flat
 
