@@ -234,7 +234,7 @@ class SpeciesCounterGUI:
         self.last_key = event.char
 
     def number_key_pressed(self, event):
-        if self.last_key:
+        if self.last_key and not (self.digits == '' and event.char == '0'):
             self.digits += event.char
 
     def add_row(self, event):
