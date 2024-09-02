@@ -25,14 +25,12 @@ class SpeciesCounterGUI:
         self.csv_filepath = None
         self.has_unsaved_changes = False
 
-        self.load_themes()
+        self.load_theme()
 
         self.create_general_frame()
 
         self.create_widgets_frame()
         self.create_csv_tools()
-        self.create_separator()
-        self.create_theme_tool()
 
         self.create_tree_frame()
         self.create_treeview()
@@ -47,6 +45,7 @@ class SpeciesCounterGUI:
     def create_root(self):
         self.root = tk.Tk()
         self.root.title('Species Counter')
+        self.root.geometry('1250x500')
         self.make_grid_resizable(self.root, 1, 1)
         self.root.protocol('WM_DELETE_WINDOW', self.ask_save_changes)
 
@@ -64,10 +63,9 @@ class SpeciesCounterGUI:
         else:
             self.root.destroy()
 
-    def load_themes(self):
+    def load_theme(self):
         self.root.tk.call('source', resource_path('themes/forest-light.tcl'))
-        self.root.tk.call('source', resource_path('themes/forest-dark.tcl'))
-        self.style.theme_use('forest-dark')
+        self.style.theme_use('forest-light')
 
     def create_general_frame(self):
         self.frame = ttk.Frame(self.root)
@@ -77,7 +75,7 @@ class SpeciesCounterGUI:
     def create_widgets_frame(self):
         self.widgets_frame = ttk.Frame(self.frame)
         self.widgets_frame.grid(row=0, column=0, padx=20, pady=10, sticky='nsew')
-        self.make_grid_resizable(self.widgets_frame, 3, 1)
+        self.make_grid_resizable(self.widgets_frame, 1, 1)
 
     def create_csv_tools(self):
         self.csv_frame = ttk.LabelFrame(self.widgets_frame, text='CSV Tools', labelanchor='n')
@@ -102,14 +100,6 @@ class SpeciesCounterGUI:
 
         self.save_button = ttk.Button(self.csv_widgets_frame, text='Save', command=self.save)
         self.save_button.grid(row=4, column=0, padx=5, pady=(5, 10), sticky='nsew')
-
-    def create_separator(self):
-        self.separator = ttk.Separator(self.widgets_frame)
-        self.separator.grid(row=1, column=0, padx=10, pady=(5, 15), sticky='ew')
-
-    def create_theme_tool(self):
-        self.theme_switch = ttk.Checkbutton(self.widgets_frame, text='Theme', style='Switch', command=self.toggle_theme)
-        self.theme_switch.grid(row=2, column=0, sticky='nsew')
 
     def create_tree_frame(self):
         self.tree_frame = ttk.Frame(self.frame)
@@ -214,7 +204,7 @@ class SpeciesCounterGUI:
             self.style.theme_use('forest-dark')
 
     def load_hotkeys(self):
-        filepath = resource_path('hot_keys.json')
+        filepath = resource_path('hotkeys.json')
 
         with open(filepath) as file:
             self.hotkeys = json.load(file)
