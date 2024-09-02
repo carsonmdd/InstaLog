@@ -5,6 +5,7 @@ import csv
 import os, sys
 import json
 from datetime import datetime
+import serial
 
 def resource_path(relative_path):
     '''Get absolute path to resource, works for dev and for PyInstaller'''
@@ -19,11 +20,13 @@ def resource_path(relative_path):
 class SpeciesCounterGUI:
 
     def __init__(self):
+        self.ask_save_folder()
+        self.csv_name = None
+        self.load_settings()
+
         self.create_root()
 
         self.style = ttk.Style(self.root)
-        self.csv_filepath = None
-        self.has_unsaved_changes = False
 
         self.load_theme()
 
@@ -34,7 +37,7 @@ class SpeciesCounterGUI:
 
         self.create_tree_frame()
         self.create_treeview()
-        self.load_hotkeys()
+        self.config_hotkeys()
 
         self.root.mainloop()
 
@@ -42,26 +45,28 @@ class SpeciesCounterGUI:
     # INTERFACE METHODS #
     #####################
 
+    def ask_save_folder(self):
+        home_directory = os.path.expanduser('~')
+        desktop_path = os.path.join(home_directory, 'Desktop')
+        self.directory = filedialog.askdirectory(initialdir=desktop_path, title='Select a directory')
+        if not self.directory:
+            sys.exit()
+
+    def load_settings(self):
+        filepath = resource_path('settings.json')
+
+        with open(filepath) as file:
+            data = json.load(file)
+            self.baud_rate = data['baud_rate']
+            self.hotkeys = data['hotkeys']
+
     def create_root(self):
         self.root = tk.Tk()
         self.root.title('Species Counter')
         self.root.geometry('1250x500')
         self.make_grid_resizable(self.root, 1, 1)
-        self.root.protocol('WM_DELETE_WINDOW', self.ask_save_changes)
 
         self.root.focus_set()
-
-    def ask_save_changes(self):
-        if self.has_unsaved_changes:
-            response = messagebox.askyesnocancel('Save Changes', 
-                                                'You have unsaved changes. Do you want to save before exiting?')
-            if response is True:
-                self.save()
-                self.root.destroy()
-            elif response is False:
-                self.root.destroy()
-        else:
-            self.root.destroy()
 
     def load_theme(self):
         self.root.tk.call('source', resource_path('themes/forest-light.tcl'))
@@ -79,27 +84,24 @@ class SpeciesCounterGUI:
 
     def create_csv_tools(self):
         self.csv_frame = ttk.LabelFrame(self.widgets_frame, text='CSV Tools', labelanchor='n')
-        self.csv_frame.grid(row=0, column=0, pady=10, sticky='nsew')
-        self.make_grid_resizable(self.csv_frame, 5, 1)
+        self.csv_frame.grid(row=0, column=0, pady=(10, 200), sticky='nsew')
+        self.make_grid_resizable(self.csv_frame, 1, 1)
 
         self.csv_widgets_frame = ttk.Frame(self.csv_frame)
         self.csv_widgets_frame.grid(row=0, column=0, sticky='nsew')
-        self.make_grid_resizable(self.csv_widgets_frame, 5, 1)
+        self.make_grid_resizable(self.csv_widgets_frame, 4, 1)
 
         self.create_button = ttk.Button(self.csv_widgets_frame, text='New CSV', command=self.reset_treeview)
-        self.create_button.grid(row=0, column=0, padx=5, pady=5, sticky='nsew')
+        self.create_button.grid(row=0, column=0, padx=15, pady=15, sticky='nsew')
 
         self.load_button = ttk.Button(self.csv_widgets_frame, text='Load CSV', command=self.load_csv)
-        self.load_button.grid(row=1, column=0, padx=5, pady=5, sticky='nsew')
+        self.load_button.grid(row=1, column=0, padx=15, pady=(0, 15), sticky='nsew')
 
         self.csv_tools_separator = ttk.Separator(self.csv_widgets_frame)
-        self.csv_tools_separator.grid(row=2, column=0, padx=5, pady=10, sticky='ew')
+        self.csv_tools_separator.grid(row=2, column=0, padx=15, pady=(0, 15), sticky='ew')
 
         self.delete_button = ttk.Button(self.csv_widgets_frame, text='Delete last row', command=self.delete_last_row)
-        self.delete_button.grid(row=3, column=0, padx=5, pady=5, sticky='nsew')
-
-        self.save_button = ttk.Button(self.csv_widgets_frame, text='Save', command=self.save)
-        self.save_button.grid(row=4, column=0, padx=5, pady=(5, 10), sticky='nsew')
+        self.delete_button.grid(row=3, column=0, padx=15, pady=(0, 15), sticky='nsew')
 
     def create_tree_frame(self):
         self.tree_frame = ttk.Frame(self.frame)
@@ -147,8 +149,6 @@ class SpeciesCounterGUI:
         for item in self.tree.get_children():
             self.tree.delete(item)
 
-        self.csv_filepath = None
-
     def load_csv(self):
         self.reset_treeview()
 
@@ -170,8 +170,6 @@ class SpeciesCounterGUI:
                 for row in csvFile:
                     self.tree.insert("", tk.END, values=row)
 
-            self.csv_filepath = filepath
-
         self.root.focus_set()
         
     def delete_last_row(self):
@@ -179,36 +177,21 @@ class SpeciesCounterGUI:
             last_item = self.tree.get_children()[-1]
             self.tree.delete(last_item)
 
-            self.has_unsaved_changes = True
+            self.save()
     
     def save(self):
-        if not self.csv_filepath:
-            time = datetime.now().replace(microsecond=0)
-            default_name = f'{time} Dotting.csv'
-            self.csv_filepath = filedialog.asksaveasfilename(initialfile=default_name,
-                                                     defaultextension='.csv', 
-                                                     filetypes=[('CSV files', '*.csv')])
-        if self.csv_filepath:
-            with open(self.csv_filepath, 'w', newline='') as file:
-                writer = csv.writer(file)
-                writer.writerow(self.tree['columns'])
-                for row in self.tree.get_children():
-                    writer.writerow(self.tree.item(row)['values'])
+        if not self.csv_name:
+            date = datetime.today().strftime('%d%b%Y')
+            self.csv_name = f'{date}_obs.csv'
 
-        self.has_unsaved_changes = False
-                        
-    def toggle_theme(self):
-        if self.theme_switch.instate(['selected']):
-            self.style.theme_use('forest-light')
-        else:
-            self.style.theme_use('forest-dark')
+        csv_path = os.path.join(self.directory, self.csv_name)
+        with open(csv_path, 'w', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(self.tree['columns'])
+            for row in self.tree.get_children():
+                writer.writerow(self.tree.item(row)['values'])
 
-    def load_hotkeys(self):
-        filepath = resource_path('hotkeys.json')
-
-        with open(filepath) as file:
-            self.hotkeys = json.load(file)
-
+    def config_hotkeys(self):
         self.last_key = ''
         self.digits = ''
 
@@ -231,7 +214,8 @@ class SpeciesCounterGUI:
         if self.last_key and self.digits:
             species = self.hotkeys[self.last_key]
             count = self.digits
-            time = datetime.now().replace(microsecond=0)
+            time = datetime.now().time().replace(microsecond=0)
+            # latitude, longitude = self.get_coords()
             latitude = '38.8951'
             longitude = '-77.0364'
 
@@ -241,7 +225,11 @@ class SpeciesCounterGUI:
             self.last_key = ''
             self.digits = ''
 
-            self.has_unsaved_changes = True
+            self.tree.yview_moveto(1.0)
+            self.save()
+        
+    def get_coords(self):
+        return
 
 if __name__ == '__main__':
     SpeciesCounterGUI()
