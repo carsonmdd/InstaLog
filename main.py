@@ -6,6 +6,7 @@ import os, sys
 import json
 from datetime import datetime
 import serial
+import serial.tools.list_ports
 
 def resource_path(relative_path):
     '''Get absolute path to resource, works for dev and for PyInstaller'''
@@ -20,9 +21,10 @@ def resource_path(relative_path):
 class SpeciesCounterGUI:
 
     def __init__(self):
+        self.load_settings()
+        self.get_gps_port()
         self.ask_save_folder()
         self.csv_name = None
-        self.load_settings()
 
         self.create_root()
 
@@ -44,21 +46,6 @@ class SpeciesCounterGUI:
     #####################
     # INTERFACE METHODS #
     #####################
-
-    def ask_save_folder(self):
-        home_directory = os.path.expanduser('~')
-        desktop_path = os.path.join(home_directory, 'Desktop')
-        self.directory = filedialog.askdirectory(initialdir=desktop_path, title='Select a directory')
-        if not self.directory:
-            sys.exit()
-
-    def load_settings(self):
-        filepath = resource_path('settings.json')
-
-        with open(filepath) as file:
-            data = json.load(file)
-            self.baud_rate = data['baud_rate']
-            self.hotkeys = data['hotkeys']
 
     def create_root(self):
         self.root = tk.Tk()
@@ -134,6 +121,41 @@ class SpeciesCounterGUI:
     #####################
     # MECHANICS METHODS #
     #####################
+
+    def ask_save_folder(self):
+        home_directory = os.path.expanduser('~')
+        desktop_path = os.path.join(home_directory, 'Desktop')
+        self.directory = filedialog.askdirectory(initialdir=desktop_path, title='Select a directory')
+        if not self.directory:
+            sys.exit()
+
+    def load_settings(self):
+        filepath = resource_path('settings.json')
+
+        try:
+            with open(filepath) as file:
+                data = json.load(file)
+                self.baud_rate = data['baud_rate']
+                self.hotkeys = data['hotkeys']
+        except Exception as e:
+            messagebox.showerror('Error', f'Error opening settings file')
+            sys.exit()
+
+    def get_gps_port(self):
+        ports = serial.tools.list_ports.comports()
+        for port in ports:
+            try:
+                with serial.Serial(port.device, baudrate=self.baud_rate, timeout=1) as ser:
+                    start_time = datetime.now().timestamp()
+                    while datetime.now().timestamp() - start_time < 5:
+                        data = ser.readline()
+                        if b'$GPGLL' in data:
+                            self.port = port.device
+            except Exception as e:
+                messagebox.showerror('Error', f'Error accessing port {port.device}: {e}')
+                sys.exit()
+
+        return None
 
     def make_grid_resizable(self, element, rows, cols):
         for i in range(rows):
