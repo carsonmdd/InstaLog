@@ -12,12 +12,26 @@ import serial
 import serial.tools.list_ports
 import threading
 
-def resource_path(relative_path):
-    '''Get absolute path to resource, works for dev and for PyInstaller'''
-    try:
+def internal_path(relative_path):
+    '''Gets path for resource bundled in app file'''
+    # If running as exe,
+    if getattr(sys, 'frozen', False):
         # PyInstaller creates a temp folder and stores path in _MEIPASS
         base_path = sys._MEIPASS
-    except Exception:
+    # else running as script
+    else:
+        base_path = os.path.abspath('.')
+
+    return os.path.join(base_path, relative_path)
+
+def external_path(relative_path):
+    '''Gets path for resource in same directory as app file on macOS'''
+    # If running as exe,
+    if getattr(sys, 'frozen', False):
+        exe_path = os.path.abspath(sys.executable)
+        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(exe_path))))
+    # else running as script
+    else:
         base_path = os.path.abspath('.')
 
     return os.path.join(base_path, relative_path)
@@ -75,7 +89,7 @@ class SpeciesCounterGUI:
 
     def load_theme(self):
         '''Loads and applies the theme for GUI appearance'''
-        self.root.tk.call('source', resource_path('themes/forest-light.tcl'))
+        self.root.tk.call('source', internal_path('themes/forest-light.tcl'))
         self.style.theme_use('forest-light')
 
     def create_general_frame(self):
@@ -136,7 +150,7 @@ class SpeciesCounterGUI:
         self.error_label.config(text=message, background='red')
 
     def clear_errors(self):
-        '''Cleares the errors in the error panel'''
+        '''Clears the errors in the error panel'''
         self.error_label.config(text='', background='white')
         self.read_error_displayed = False
 
@@ -184,7 +198,7 @@ class SpeciesCounterGUI:
 
     def load_settings(self):
         '''Reads in settings from a file'''
-        filepath = resource_path('settings.json')
+        filepath = external_path('settings.json')
 
         try:
             with open(filepath) as file:
