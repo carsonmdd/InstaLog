@@ -4,9 +4,13 @@ from tkinter import ttk, filedialog, messagebox
 import csv
 import os, sys
 import json
+
 from datetime import datetime
+import time
+
 import serial
 import serial.tools.list_ports
+import threading
 
 def resource_path(relative_path):
     '''Get absolute path to resource, works for dev and for PyInstaller'''
@@ -18,15 +22,25 @@ def resource_path(relative_path):
 
     return os.path.join(base_path, relative_path)
 
+class Action:
+    def __init__(self, type, undo_function, data=None):
+        self.type = type
+        self.undo_function = undo_function
+        self.data = data
+    
+    def undo(self):
+        self.undo_function(self.data)
+
 class SpeciesCounterGUI:
 
     def __init__(self):
         self.load_settings()
         self.get_gps_port()
+        self.coords = (0.0, 0.0)
+        self.read_error_displayed = False
         self.ask_save_folder()
         self.csv_name = None
-        self.last_coords = (0.0, 0.0)
-        self.read_error_displayed = False
+        self.undo_stack = []
 
         self.create_root()
         self.style = ttk.Style(self.root)
@@ -41,6 +55,8 @@ class SpeciesCounterGUI:
         self.create_tree_frame()
         self.create_treeview()
         self.config_hotkeys()
+
+        self.init_gps_thread()
 
         self.root.mainloop()
 
@@ -82,7 +98,7 @@ class SpeciesCounterGUI:
 
         self.csv_widgets_frame = ttk.Frame(self.csv_frame)
         self.csv_widgets_frame.grid(row=0, column=0, sticky='nsew')
-        self.make_grid_resizable(self.csv_widgets_frame, 4, 1)
+        self.make_grid_resizable(self.csv_widgets_frame, 5, 1)
 
         self.create_button = ttk.Button(self.csv_widgets_frame, text='New CSV', command=self.reset_treeview)
         self.create_button.grid(row=0, column=0, padx=15, pady=15, sticky='nsew')
@@ -95,6 +111,9 @@ class SpeciesCounterGUI:
 
         self.delete_button = ttk.Button(self.csv_widgets_frame, text='Delete last row', command=self.delete_last_row)
         self.delete_button.grid(row=3, column=0, padx=15, pady=(0, 15), sticky='nsew')
+
+        self.undo_button = ttk.Button(self.csv_widgets_frame, text='Undo', command=self.undo)
+        self.undo_button.grid(row=4, column=0, padx=15, pady=(0, 15), sticky='nsew')
 
     def create_error_panel(self):
         '''Creates error panel with "Clear" button'''
@@ -111,9 +130,6 @@ class SpeciesCounterGUI:
                                      font=('TkDefaultFont', 16, 'bold'), 
                                      anchor='center')
         self.error_label.grid(row=0, column=0)
-
-        self.clear_button = ttk.Button(self.error_frame, text='Clear', command=self.clear_errors)
-        self.clear_button.grid(row=1, column=0, padx=15, pady=(0, 15), sticky='nsew')
 
     def show_error(self, message):
         '''Displays an error in the error panel'''
@@ -194,8 +210,8 @@ class SpeciesCounterGUI:
         for port in ports:
             try:
                 with serial.Serial(port.device, baudrate=self.baud_rate, timeout=1) as ser:
-                    start_time = datetime.now().timestamp()
-                    while datetime.now().timestamp() - start_time < 5:
+                    start_time = time.time()
+                    while time.time() - start_time < 5:
                         data = ser.readline()
                         for i in range(len(gps_sentences)):
                             sentence = gps_sentences[i]
@@ -213,6 +229,16 @@ class SpeciesCounterGUI:
         if not self.port:
             messagebox.showerror('Error', f'Could not find a connected GPS')
             sys.exit()
+
+    def init_gps_thread(self):
+        self.gps_thread = threading.Thread(target=self.read_coords)
+        self.gps_thread.daemon = True
+        self.gps_thread.start()
+
+    def read_coords(self):
+        while True:
+            self.coords = self.get_coords()
+            time.sleep(3)
 
     def make_grid_resizable(self, element, rows, cols):
         '''Makes an grid element's rows and columns resizable'''
@@ -258,12 +284,25 @@ class SpeciesCounterGUI:
         self.root.focus_set()
         
     def delete_last_row(self):
-        '''Deletes the contents of teh last row in the treeview'''
+        '''Deletes the contents of the last row in the treeview'''
         if self.tree.get_children():
             last_item = self.tree.get_children()[-1]
+            data = self.tree.item(last_item)['values']
             self.tree.delete(last_item)
 
             self.save()
+
+            self.undo_stack.append(Action('delete row', self.undo_delete_last_row, data))
+
+    def undo_delete_last_row(self, data):
+        self.tree.insert("", tk.END, values=data)
+        self.tree.yview_moveto(1.0)
+        self.save()
+
+    def undo(self):
+        if self.undo_stack:
+            last_action = self.undo_stack.pop()
+            last_action.undo()
     
     def save(self):
         '''Writes the contents of the treeview to the output csv'''
@@ -309,9 +348,7 @@ class SpeciesCounterGUI:
             species = self.hotkeys[self.last_key]
             count = self.digits
             time = datetime.now().time().replace(microsecond=0)
-            latitude, longitude = self.get_coords()
-            # latitude = '38.8951'
-            # longitude = '-77.0364'
+            latitude, longitude = self.coords
 
             row = [species, count, time, latitude, longitude]
             self.tree.insert("", tk.END, values=row)
@@ -321,8 +358,17 @@ class SpeciesCounterGUI:
 
             self.tree.yview_moveto(1.0)
             self.save()
+
+            self.undo_stack.append(Action('add row', self.undo_add_row))
+
+    def undo_add_row(self, data):
+        if self.tree.get_children():
+            last_item = self.tree.get_children()[-1]
+            self.tree.delete(last_item)
+
+            self.save()
         
-    def get_coords(self) -> float:
+    def get_coords(self) -> tuple[float]:
         '''
         - Attempts to read and return coordinates from the GPS
         - Upon failure, displays an error message in the GUI and returns
@@ -330,10 +376,10 @@ class SpeciesCounterGUI:
         '''
         lat, lon = 0.0, 0.0
 
-        start_time = datetime.now().timestamp()
+        start_time = time.time()
         with serial.Serial(port=self.port, baudrate=self.baud_rate, timeout=1) as ser:
             # Read for right sentence with valid data for 5 seconds
-            while datetime.now().timestamp() - start_time < 5:
+            while time.time() - start_time < 5:
                 num_types = sum(element != None for element in self.sentence_types)
                 line = ser.readline().decode('utf-8', errors='replace')
                 if line.startswith(self.sentence_types[0]):
@@ -341,37 +387,31 @@ class SpeciesCounterGUI:
                     parts = line.split(',')
                     if parts[6] == '1' or parts[6] == '2':
                         lat, lon = self.ddm2dd(((parts[2], parts[3]), (parts[4], parts[5])))
-                        self.last_coords = lat, lon
+                        self.coords = lat, lon
                         self.clear_errors()
-                    else:
-                        print(line)
                     break
                 elif num_types >= 2 and line.startswith(self.sentence_types[1]):
                     # $GPRMC,123519.00,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A
                     parts = line.split(',')
                     if parts[2] == 'A':
                         lat, lon = self.ddm2dd(((parts[3], parts[4]), (parts[5], parts[6])))
-                        self.last_coords = lat, lon
+                        self.coords = lat, lon
                         self.clear_errors()
-                    else:
-                        print(line)
                     break
                 elif num_types == 3 and line.startswith(self.sentence_types[2]):
                     # $GPGLL,3519.2341,N,12050.9613,W,013604,A,A*54
                     parts = line.split(',')
                     if parts[6] == 'A':
                         lat, lon = self.ddm2dd(((parts[1], parts[2]), (parts[3], parts[4])))
-                        self.last_coords = lat, lon
+                        self.coords = lat, lon
                         self.clear_errors()
-                    else:
-                        print(line)
                     break
 
         if (lat, lon) == (0.0, 0.0) and not self.read_error_displayed:
             self.show_error('Can\'t read from GPS')
             self.read_error_displayed = True
 
-        return self.last_coords
+        return self.coords
 
     def ddm2dd(self, coordinates: tuple[tuple[str]]) -> tuple[float]:
         '''
