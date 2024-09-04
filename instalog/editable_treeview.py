@@ -5,6 +5,8 @@ class EditableTreeview(ttk.Treeview):
     def __init__(self, master, **kwargs):
         super().__init__(master, **kwargs)
 
+        self.entry = None
+
         self.bind('<Double-1>', self.on_double_click)
 
     def on_double_click(self, event):
@@ -13,29 +15,40 @@ class EditableTreeview(ttk.Treeview):
         region = self.identify_region(event.x, event.y)
         if region != 'cell':
             return
-
+        
+        self.create_entry(event)
+        
+    def create_entry(self, event):
         col_index = int(self.identify_column(event.x)[1:]) - 1
         selected_iid = self.focus()
         cell_box = self.bbox(selected_iid, col_index)
 
         selected_text = self.item(selected_iid).get('values')[col_index]
     
-        entry = ttk.Entry(self)
+        self.entry = ttk.Entry(self)
 
-        entry.selected_iid = selected_iid
-        entry.col_index = col_index
+        self.entry.selected_iid = selected_iid
+        self.entry.col_index = col_index
 
-        entry.insert(0, selected_text)
-        entry.select_range(0, tk.END)
-        entry.focus()
+        self.entry.insert(0, selected_text)
+        self.entry.select_range(0, tk.END)
+        self.entry.focus()
 
-        entry.bind('<FocusOut>', self.on_focus_out)
-        entry.bind('<Return>', self.on_enter)
+        self.entry.bind('<FocusOut>', self.on_focus_out)
+        self.entry.bind('<Return>', self.on_enter)
+        self.bind('<MouseWheel>', self.on_scroll)
+        self.bind('<Shift-MouseWheel>', self.on_scroll)
+        self.x_scrollbar.bind('<B1-Motion>', self.on_scroll)
+        self.y_scrollbar.bind('<B1-Motion>', self.on_scroll)
 
-        entry.place(x=cell_box[0],
+        self.entry.place(x=cell_box[0],
                     y=cell_box[1],
                     w=cell_box[2],
                     h=cell_box[3])
+
+    def on_scroll(self, event):
+        if self.entry.winfo_exists():
+            self.entry.destroy()
 
     def disable_root_binds(self):
         root = self.master.master.master

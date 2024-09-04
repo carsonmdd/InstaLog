@@ -16,6 +16,8 @@ import serial
 import serial.tools.list_ports
 import threading
 
+from collections import deque
+
 class InstaLogApp:
 
     def __init__(self):
@@ -25,7 +27,7 @@ class InstaLogApp:
         self.read_error_displayed = False
         self.ask_save_folder()
         self.csv_path = None
-        self.undo_stack = []
+        self.undo_stack = deque(maxlen=20)
 
         self.create_root()
         self.style = ttk.Style(self.root)
@@ -153,6 +155,8 @@ class InstaLogApp:
         self.tree_yscroll = ttk.Scrollbar(self.tree_frame, orient='vertical', command=self.tree.yview)
         self.tree_yscroll.grid(row=0, column=1, sticky='ns')
 
+        self.tree.x_scrollbar = self.tree_xscroll
+        self.tree.y_scrollbar = self.tree_yscroll
         self.tree.configure(xscrollcommand=self.tree_xscroll.set, yscrollcommand=self.tree_yscroll.set)
 
         self.reset_treeview()
@@ -293,6 +297,7 @@ class InstaLogApp:
         self.save()
 
     def undo(self):
+        print(len(self.undo_stack))
         if self.undo_stack:
             last_action = self.undo_stack.pop()
             last_action.undo()
