@@ -423,7 +423,7 @@ namespace eval ttk::theme::forest-light {
                 disabled $I(border-basic) \
                 focus $I(border-accent) \
                 hover $I(border-hover) \
-            ] -border 5 -padding {8} -sticky nsew
+            ] -border 5 -sticky nsew
 
         # Combobox
         ttk::style map TCombobox -selectbackground [list \
@@ -528,7 +528,7 @@ namespace eval ttk::theme::forest-light {
                 user1 $I(down) \
             ] -width 17 -sticky {}
 
-        ttk::style configure Treeview -background $colors(-bg)
+        ttk::style configure Treeview -background $colors(-bg) -rowheight 25
         ttk::style configure Treeview.Item -padding {2 0 0 0}
 
         ttk::style map Treeview \
