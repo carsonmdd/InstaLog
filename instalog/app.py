@@ -24,7 +24,7 @@ class InstaLogApp:
         self.coords = (0.0, 0.0)
         self.read_error_displayed = False
         self.ask_save_folder()
-        self.csv_name = None
+        self.csv_path = None
         self.undo_stack = []
 
         self.create_root()
@@ -87,7 +87,7 @@ class InstaLogApp:
         self.csv_widgets_frame.grid(row=0, column=0, sticky='nsew')
         self.make_grid_resizable(self.csv_widgets_frame, 5, 1)
 
-        self.create_button = ttk.Button(self.csv_widgets_frame, text='New CSV', command=self.reset_treeview)
+        self.create_button = ttk.Button(self.csv_widgets_frame, text='New CSV', command=self.new_csv)
         self.create_button.grid(row=0, column=0, padx=15, pady=15, sticky='nsew')
 
         self.load_button = ttk.Button(self.csv_widgets_frame, text='Load CSV', command=self.load_csv)
@@ -245,6 +245,10 @@ class InstaLogApp:
         for item in self.tree.get_children():
             self.tree.delete(item)
 
+    def new_csv(self):
+        self.reset_treeview()
+        self.csv_path = None
+
     def load_csv(self):
         '''
         - Prompts the user to select a CSV file
@@ -295,16 +299,26 @@ class InstaLogApp:
     
     def save(self):
         '''Writes the contents of the treeview to the output csv'''
-        if not self.csv_name:
+        if not self.csv_path:
             date = datetime.today().strftime('%d%b%Y')
-            self.csv_name = f'{date}_obs.csv'
-
-        csv_path = os.path.join(self.directory, self.csv_name)
-        with open(csv_path, 'w', newline='') as file:
+            csv_name = f'{date}_obs'
+            self.csv_path = os.path.join(self.directory, csv_name + '.csv')
+            if os.path.exists(self.csv_path):
+                self.csv_path = self.new_csv_path(csv_name, '.csv')
+        
+        with open(self.csv_path, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(self.tree['columns'])
             for row in self.tree.get_children():
                 writer.writerow(self.tree.item(row).get('values'))
+
+    def new_csv_path(self, base_name, extension):
+        counter = 1
+        new_name = f'{base_name}{extension}'
+        while os.path.exists(os.path.join(self.directory, new_name)):
+            new_name = f'{base_name}_{counter}{extension}'
+            counter += 1
+        return os.path.join(self.directory, new_name)
 
     def config_hotkeys(self):
         '''Creates the keybinds for the provided keys'''
