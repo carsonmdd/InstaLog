@@ -6,6 +6,7 @@ class EditableTreeview(ttk.Treeview):
         super().__init__(master, **kwargs)
 
         self.entry = None
+        self.num_observers = 0
 
         self.bind('<Double-1>', self.on_double_click)
 
@@ -67,6 +68,9 @@ class EditableTreeview(ttk.Treeview):
         new_values = self.item(selected_iid).get('values')
         new_values[col_index] = new_text
         self.item(selected_iid, values=new_values)
+
+        if col_index == 3:
+            self.num_observers = new_text
 
         event.widget.destroy()
         self.restore_root_binds()

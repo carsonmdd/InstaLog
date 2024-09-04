@@ -19,12 +19,13 @@ import threading
 from collections import deque
 
 class InstaLogApp:
-
     def __init__(self):
         self.load_settings()
-        self.get_gps_port()
+
+        # self.get_gps_port()
         self.coords = (0.0, 0.0)
         self.read_error_displayed = False
+
         self.ask_save_folder()
         self.csv_path = None
         self.undo_stack = deque(maxlen=20)
@@ -55,7 +56,7 @@ class InstaLogApp:
     def create_root(self):
         '''Creates and configures the root'''
         self.root = tk.Tk()
-        self.root.title('Species Counter')
+        self.root.title('InstaLog')
         self.root.geometry('1250x500')
         self.root.binds = {}
         self.make_grid_resizable(self.root, 1, 1)
@@ -141,9 +142,11 @@ class InstaLogApp:
     def create_treeview(self):
         '''Creates and configures the treeview for displaying the CSV'''
         self.col_widths = {
-            'Species': 200,
-            'Count': 100,
-            'Timestamp': 250,
+            'Species': 150,
+            'Count': 50,
+            'Timestamp': 100,
+            'Obs': 50,
+            'Comment': 200,
             'Latitude': 150,
             'Longitude': 150
         }
@@ -361,9 +364,11 @@ class InstaLogApp:
             species = self.hotkeys[self.last_key]
             count = self.digits
             time = datetime.now().time().replace(microsecond=0)
+            obs = self.tree.num_observers
+            comment = ''
             latitude, longitude = self.coords
 
-            row = [species, count, time, latitude, longitude]
+            row = [species, count, time, obs, comment, latitude, longitude]
             self.tree.insert("", tk.END, values=row)
 
             self.last_key = ''
