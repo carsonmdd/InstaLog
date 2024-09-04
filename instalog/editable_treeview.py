@@ -35,19 +35,19 @@ class EditableTreeview(ttk.Treeview):
         self.entry.select_range(0, tk.END)
         self.entry.focus()
 
-        self.entry.bind('<FocusOut>', self.on_focus_out)
+        self.entry.bind('<FocusOut>', self.destroy_entry)
         self.entry.bind('<Return>', self.on_enter)
-        self.bind('<MouseWheel>', self.on_scroll)
-        self.bind('<Shift-MouseWheel>', self.on_scroll)
-        self.x_scrollbar.bind('<B1-Motion>', self.on_scroll)
-        self.y_scrollbar.bind('<B1-Motion>', self.on_scroll)
+        self.bind('<MouseWheel>', self.destroy_entry)
+        self.bind('<Shift-MouseWheel>', self.destroy_entry)
+        self.x_scrollbar.bind('<B1-Motion>', self.destroy_entry)
+        self.y_scrollbar.bind('<B1-Motion>', self.destroy_entry)
 
         self.entry.place(x=cell_box[0],
                     y=cell_box[1],
                     w=cell_box[2],
                     h=cell_box[3])
 
-    def on_scroll(self, event):
+    def destroy_entry(self, event):
         if self.entry.winfo_exists():
             self.entry.destroy()
 
@@ -56,14 +56,11 @@ class EditableTreeview(ttk.Treeview):
         for seq in root.binds.keys():
             root.unbind(seq)
 
-    def on_focus_out(self, event):
-        event.widget.destroy()
-
     def on_enter(self, event):
-        new_text = event.widget.get()
+        new_text = self.entry.get()
 
-        selected_iid = event.widget.selected_iid
-        col_index = event.widget.col_index
+        selected_iid = self.entry.selected_iid
+        col_index = self.entry.col_index
 
         new_values = self.item(selected_iid).get('values')
         new_values[col_index] = new_text
@@ -71,9 +68,20 @@ class EditableTreeview(ttk.Treeview):
 
         if col_index == 3:
             self.num_observers = new_text
+            self.update_obs_below(selected_iid)
 
-        event.widget.destroy()
+        self.entry.destroy()
         self.restore_root_binds()
+
+    def update_obs_below(self, start_iid):
+        items = self.get_children()
+
+        start_index = items.index(start_iid) + 1
+        new_obs = self.item(start_iid).get('values')[3]
+        for item in items[start_index:]:
+            new_values = self.item(item).get('values')
+            new_values[3] = new_obs
+            self.item(item, values=new_values)
 
     def restore_root_binds(self):
         root = self.master.master.master

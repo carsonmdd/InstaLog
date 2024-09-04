@@ -106,7 +106,7 @@ class InstaLogApp:
         self.undo_button.grid(row=4, column=0, padx=15, pady=(0, 15), sticky='nsew')
 
     def create_error_panel(self):
-        '''Creates error panel with "Clear" button'''
+        '''Creates error panel'''
         self.error_labelframe = ttk.LabelFrame(self.widgets_frame, text='Error Log', labelanchor='n')
         self.error_labelframe.grid(row=1, column=0, pady=(0, 10), sticky='nsew')
         self.make_grid_resizable(self.error_labelframe, 1, 1)
@@ -131,7 +131,7 @@ class InstaLogApp:
         self.read_error_displayed = False
 
     def create_tree_frame(self):
-        '''Creates and configures the tree frame'''
+        '''Creates and configures the treeview frame'''
         self.tree_frame = ttk.Frame(self.frame)
         self.tree_frame.grid(row=0, column=1, padx=(0, 20), pady=10, sticky='nsew')
         self.tree_frame.grid_rowconfigure(0, weight=1)
@@ -225,7 +225,7 @@ class InstaLogApp:
             sys.exit()
 
     def init_gps_thread(self):
-        '''Starts thread for consistenly reading coordinates in the background'''
+        '''Starts thread for regularly reading coordinates in the background'''
         self.gps_thread = threading.Thread(target=self.read_coords)
         self.gps_thread.daemon = True
         self.gps_thread.start()
@@ -237,7 +237,7 @@ class InstaLogApp:
             time.sleep(3)
 
     def make_grid_resizable(self, element, rows, cols):
-        '''Makes an grid element's rows and columns resizable'''
+        '''Makes a grid element's rows and columns resizable'''
         for i in range(rows):
             element.grid_rowconfigure(i, weight=1)
         for i in range(cols):
@@ -300,7 +300,6 @@ class InstaLogApp:
         self.save()
 
     def undo(self):
-        print(len(self.undo_stack))
         if self.undo_stack:
             last_action = self.undo_stack.pop()
             last_action.undo()
@@ -417,7 +416,7 @@ class InstaLogApp:
                         self.clear_errors()
                     break
                 elif num_types == 3 and line.startswith(self.sentence_types[2]):
-                    # $GPGLL,3519.2341,N,12050.9613,W,013604,A,A*54
+                    # $GPGLL,4807.038,N,01131.000,E,013604,A,A*54
                     parts = line.split(',')
                     if parts[6] == 'A':
                         lat, lon = self.ddm2dd(((parts[1], parts[2]), (parts[3], parts[4])))
