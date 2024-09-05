@@ -11,8 +11,6 @@ class EditableTreeview(ttk.Treeview):
         self.bind('<Double-1>', self.on_double_click)
 
     def on_double_click(self, event):
-        self.disable_root_binds()
-
         region = self.identify_region(event.x, event.y)
         if region != 'cell':
             return
@@ -51,11 +49,6 @@ class EditableTreeview(ttk.Treeview):
         if self.entry.winfo_exists():
             self.entry.destroy()
 
-    def disable_root_binds(self):
-        root = self.master.master.master
-        for seq in root.binds.keys():
-            root.unbind(seq)
-
     def on_enter(self, event):
         new_text = self.entry.get()
 
@@ -71,7 +64,6 @@ class EditableTreeview(ttk.Treeview):
             self.update_obs_below(selected_iid)
 
         self.entry.destroy()
-        self.restore_root_binds()
 
     def update_obs_below(self, start_iid):
         items = self.get_children()
@@ -82,8 +74,3 @@ class EditableTreeview(ttk.Treeview):
             new_values = self.item(item).get('values')
             new_values[3] = new_obs
             self.item(item, values=new_values)
-
-    def restore_root_binds(self):
-        root = self.master.master.master
-        for seq, func in root.binds.items():
-            root.bind(seq, func)

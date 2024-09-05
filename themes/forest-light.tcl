@@ -531,10 +531,6 @@ namespace eval ttk::theme::forest-light {
         ttk::style configure Treeview -background $colors(-bg) -rowheight 25
         ttk::style configure Treeview.Item -padding {2 0 0 0}
 
-        ttk::style map Treeview \
-            -background [list selected $colors(-selectbg)] \
-            -foreground [list selected $colors(-selectfg)]
-
         # Sashes
         #ttk::style map TPanedwindow -background [list hover $colors(-bg)]
     }

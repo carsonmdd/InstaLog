@@ -38,11 +38,11 @@ class InstaLogApp:
 
         self.create_widgets_frame()
         self.create_csv_tools()
+        self.create_entry_viewer()
         self.create_error_panel()
 
         self.create_tree_frame()
         self.create_treeview()
-        self.config_hotkeys()
 
         self.init_gps_thread()
 
@@ -57,11 +57,7 @@ class InstaLogApp:
         '''Creates and configures the root'''
         self.root = tk.Tk()
         self.root.title('InstaLog')
-        self.root.geometry('1250x500')
-        self.root.binds = {}
         self.make_grid_resizable(self.root, 1, 1)
-
-        self.root.focus_set()
 
     def load_theme(self):
         '''Loads and applies the theme for GUI appearance'''
@@ -78,12 +74,12 @@ class InstaLogApp:
         '''Creates and configures frame for widgets'''
         self.widgets_frame = ttk.Frame(self.frame)
         self.widgets_frame.grid(row=0, column=0, padx=20, pady=10, sticky='nsew')
-        self.make_grid_resizable(self.widgets_frame, 2, 1)
+        self.make_grid_resizable(self.widgets_frame, 3, 1)
 
     def create_csv_tools(self):
         '''Creates CSV widgets'''
         self.csv_frame = ttk.LabelFrame(self.widgets_frame, text='CSV Tools', labelanchor='n')
-        self.csv_frame.grid(row=0, column=0, pady=(10, 100), sticky='nsew')
+        self.csv_frame.grid(row=0, column=0, pady=10, sticky='nsew')
         self.make_grid_resizable(self.csv_frame, 1, 1)
 
         self.csv_widgets_frame = ttk.Frame(self.csv_frame)
@@ -105,10 +101,30 @@ class InstaLogApp:
         self.undo_button = ttk.Button(self.csv_widgets_frame, text='Undo', command=self.undo)
         self.undo_button.grid(row=4, column=0, padx=15, pady=(0, 15), sticky='nsew')
 
+    def create_entry_viewer(self):
+        self.viewer_labelframe = ttk.LabelFrame(self.widgets_frame, text='Entry Viewer', labelanchor='n')
+        self.viewer_labelframe.grid(row=1, column=0, pady=(0, 10), sticky='nsew')
+        self.make_grid_resizable(self.viewer_labelframe, 1, 1)
+
+        self.viewer_frame = ttk.Frame(self.viewer_labelframe)
+        self.viewer_frame.grid(row=0, column=0, sticky='nsew')
+        self.make_grid_resizable(self.viewer_frame, 1, 1)
+
+        self.viewer = tk.Entry(self.viewer_frame, font=('TkDefaultFont', 16, 'bold'))
+        self.viewer.grid(row=0, column=0, padx=5, pady=5, sticky='nsew')
+        self.viewer.bind('<Return>', self.on_return)
+        self.viewer.focus_set()
+
+    def on_return(self, event):
+        text = self.viewer.get().upper()
+        self.species, self.count = self.parse_text(text)    
+        self.add_row()
+        self.viewer.delete(0, tk.END)
+
     def create_error_panel(self):
         '''Creates error panel'''
         self.error_labelframe = ttk.LabelFrame(self.widgets_frame, text='Error Log', labelanchor='n')
-        self.error_labelframe.grid(row=1, column=0, pady=(0, 10), sticky='nsew')
+        self.error_labelframe.grid(row=2, column=0, pady=(0, 10), sticky='nsew')
         self.make_grid_resizable(self.error_labelframe, 1, 1)
 
         self.error_frame = ttk.Frame(self.error_labelframe)
@@ -119,7 +135,7 @@ class InstaLogApp:
                                      borderwidth=5,
                                      font=('TkDefaultFont', 16, 'bold'), 
                                      anchor='center')
-        self.error_label.grid(row=0, column=0)
+        self.error_label.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
 
     def show_error(self, message):
         '''Displays an error in the error panel'''
@@ -142,10 +158,10 @@ class InstaLogApp:
     def create_treeview(self):
         '''Creates and configures the treeview for displaying the CSV'''
         self.col_widths = {
-            'Species': 150,
-            'Count': 50,
-            'Timestamp': 100,
-            'Obs': 50,
+            'Species': 250,
+            'Count': 75,
+            'Time': 150,
+            'Obs': 75,
             'Comment': 200,
             'Latitude': 150,
             'Longitude': 150
@@ -184,7 +200,7 @@ class InstaLogApp:
             with open(filepath) as file:
                 data = json.load(file)
                 self.baud_rate = data['baud_rate']
-                self.hotkeys = data['hotkeys']
+                self.shortcuts = data['shortcuts']
         except Exception as e:
             messagebox.showerror('Error', f'Error opening settings file: {e}')
             sys.exit()
@@ -280,8 +296,6 @@ class InstaLogApp:
 
                 for row in csvFile:
                     self.tree.insert("", tk.END, values=row)
-
-        self.root.focus_set()
         
     def delete_last_row(self):
         '''Deletes the contents of the last row in the treeview'''
@@ -303,6 +317,22 @@ class InstaLogApp:
         if self.undo_stack:
             last_action = self.undo_stack.pop()
             last_action.undo()
+
+    def parse_text(self, text: str) -> tuple[str]:
+        species, count = '', ''
+        for i in range(len(text)):
+            if text[i].isdigit():
+                species = text[:i].strip()
+                count = text[i:].strip()
+                break
+        
+        if species == '':
+            species = text
+            count = '0'
+        if species in self.shortcuts:
+            species = self.shortcuts[species]
+
+        return species, count
     
     def save(self):
         '''Writes the contents of the treeview to the output csv'''
@@ -327,56 +357,22 @@ class InstaLogApp:
             counter += 1
         return os.path.join(self.directory, new_name)
 
-    def config_hotkeys(self):
-        '''Creates the keybinds for the provided keys'''
-        self.last_key = ''
-        self.digits = ''
-
-        for key in self.hotkeys.keys():
-            seq = f'<KeyPress-{key}>'
-            self.root.bind(seq, self.key_pressed)
-            self.root.binds[seq] = self.key_pressed
-
-        for i in range(10):
-            seq = f'<KeyPress-{i}>'
-            self.root.bind(seq, self.number_key_pressed)
-            self.root.binds[seq] = self.number_key_pressed
-
-        self.root.bind('<Return>', self.add_row)
-        self.root.binds['<Return>'] = self.add_row
-
-    def key_pressed(self, event):
-        '''Updates the last key pressed when a hotkey letter is pressed'''
-        self.last_key = event.char
-
-    def number_key_pressed(self, event):
-        '''
-        Appends the number pressed to the recorded digits and
-        prevents leading zeros from being appended
-        '''
-        if self.last_key and not (self.digits == '' and event.char == '0'):
-            self.digits += event.char
-
-    def add_row(self, event):
+    def add_row(self):
         '''Retrieves the necessary data, adds a row to the treeview, and updates the CSV'''
-        if self.last_key and self.digits:
-            species = self.hotkeys[self.last_key]
-            count = self.digits
-            time = datetime.now().time().replace(microsecond=0)
-            obs = self.tree.num_observers
-            comment = ''
-            latitude, longitude = self.coords
+        species = self.species
+        count = self.count
+        time = datetime.now().time().replace(microsecond=0)
+        obs = self.tree.num_observers
+        comment = ''
+        latitude, longitude = self.coords
 
-            row = [species, count, time, obs, comment, latitude, longitude]
-            self.tree.insert("", tk.END, values=row)
+        row = [species, count, time, obs, comment, latitude, longitude]
+        self.tree.insert("", tk.END, values=row)
 
-            self.last_key = ''
-            self.digits = ''
+        self.tree.yview_moveto(1.0)
+        self.save()
 
-            self.tree.yview_moveto(1.0)
-            self.save()
-
-            self.undo_stack.append(Action('add row', self.undo_add_row))
+        self.undo_stack.append(Action('add row', self.undo_add_row))
 
     def undo_add_row(self, data):
         if self.tree.get_children():
