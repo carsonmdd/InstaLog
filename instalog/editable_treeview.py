@@ -6,7 +6,7 @@ class EditableTreeview(ttk.Treeview):
         super().__init__(master, **kwargs)
 
         self.entry = None
-        self.num_observers = 0
+        self.num_observers = 2
 
         self.bind('<Double-1>', self.on_double_click)
 

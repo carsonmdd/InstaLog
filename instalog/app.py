@@ -16,6 +16,10 @@ import serial
 import serial.tools.list_ports
 import threading
 
+import pandas as pd
+import geopandas as gpd
+from shapely.geometry import LineString, Point
+
 from collections import deque
 
 class InstaLogApp:
@@ -44,6 +48,7 @@ class InstaLogApp:
         self.create_tree_frame()
         self.create_treeview()
 
+        self.track_df = pd.DataFrame(columns=['Time', 'Latitude', 'Longitude'])
         self.init_gps_thread()
 
     def run(self):
@@ -57,6 +62,7 @@ class InstaLogApp:
         '''Creates and configures the root'''
         self.root = tk.Tk()
         self.root.title('InstaLog')
+        self.root.protocol('WM_DELETE_WINDOW', self.gen_shapefiles)
         self.make_grid_resizable(self.root, 1, 1)
 
     def load_theme(self):
@@ -103,7 +109,7 @@ class InstaLogApp:
 
     def create_entry_viewer(self):
         self.viewer_labelframe = ttk.LabelFrame(self.widgets_frame, text='Entry Viewer', labelanchor='n')
-        self.viewer_labelframe.grid(row=1, column=0, pady=(0, 10), sticky='nsew')
+        self.viewer_labelframe.grid(row=1, column=0, pady=(0, 100), sticky='nsew')
         self.make_grid_resizable(self.viewer_labelframe, 1, 1)
 
         self.viewer_frame = ttk.Frame(self.viewer_labelframe)
@@ -116,7 +122,7 @@ class InstaLogApp:
         self.viewer.focus_set()
 
     def on_return(self, event):
-        text = self.viewer.get().upper()
+        text = self.viewer.get()
         self.species, self.count = self.parse_text(text)    
         self.add_row()
         self.viewer.delete(0, tk.END)
@@ -166,7 +172,7 @@ class InstaLogApp:
             'Latitude': 150,
             'Longitude': 150
         }
-        self.tree = EditableTreeview(self.tree_frame, show='headings', columns=list(self.col_widths.keys()), height=15)
+        self.tree = EditableTreeview(self.tree_frame, show='headings', columns=list(self.col_widths.keys()), height=20)
         self.tree.grid(row=0, column=0, sticky='nsew')
 
         self.tree_xscroll = ttk.Scrollbar(self.tree_frame, orient='horizontal', command=self.tree.xview)
@@ -188,8 +194,8 @@ class InstaLogApp:
         '''Prompts the user to select a directory for output files'''
         home_directory = os.path.expanduser('~')
         desktop_path = os.path.join(home_directory, 'Desktop')
-        self.directory = filedialog.askdirectory(initialdir=desktop_path, title='Select a directory')
-        if not self.directory:
+        self.output_dir = filedialog.askdirectory(initialdir=desktop_path, title='Select a directory')
+        if not self.output_dir:
             sys.exit()
 
     def load_settings(self):
@@ -250,6 +256,10 @@ class InstaLogApp:
         '''Retrieves coordinates every 3 seconds'''
         while True:
             self.coords = self.get_coords()
+            row = [datetime.now().time().replace(microsecond=0),
+                   self.coords[0],
+                   self.coords[1]]
+            self.track_df.loc[len(self.track_df)] = row
             time.sleep(3)
 
     def make_grid_resizable(self, element, rows, cols):
@@ -258,6 +268,54 @@ class InstaLogApp:
             element.grid_rowconfigure(i, weight=1)
         for i in range(cols):
             element.grid_columnconfigure(i, weight=1)
+
+    def gen_shapefiles(self):
+        if not self.csv_path:
+            return
+        
+        obs_df = pd.read_csv(self.csv_path)
+
+        self.add_obs_geometry(obs_df)
+        self.add_track_geometry(self.track_df)
+
+        self.write_shapefile('track', self.track_df)
+        self.write_shapefile('obs', obs_df)
+
+        self.root.destroy()
+
+    def add_obs_geometry(self, df):
+        points = []
+        for i in range(len(df)):
+            point = Point(df.iloc[i]['Longitude'], df.iloc[i]['Latitude'])
+            points.append(point)
+
+        df['geometry'] = points
+    
+    def add_track_geometry(self, df):
+        linestrings = []
+        for i in range(len(df) - 1):
+            start = (df.iloc[i]['Longitude'], df.iloc[i]['Latitude'])
+            end = (df.iloc[i + 1]['Longitude'], df.iloc[i + 1]['Latitude'])
+            ls = LineString([start, end])
+            linestrings.append(ls)
+        if linestrings:
+            linestrings.append(linestrings[-1])
+
+        df['geometry'] = linestrings
+
+    def write_shapefile(self, type, df):
+        gdf = gpd.GeoDataFrame(df, geometry='geometry')
+        gdf.set_crs(epsg=4326, inplace=True)
+
+        dir = f'{self.output_dir}/{type}'
+        if os.path.exists(dir):
+            dir = self.new_path(dir)
+        date = datetime.today().strftime('%d%b%Y')
+        filename = f'{date}_{type}'
+        output_path = os.path.join(dir, filename + '.shp')
+
+        os.makedirs(dir, exist_ok=True)
+        gdf.to_file(output_path)
 
     def reset_treeview(self):
         '''Clears the entries in the current treeview'''
@@ -327,10 +385,10 @@ class InstaLogApp:
                 break
         
         if species == '':
-            species = text
+            species = text.strip()
             count = '0'
-        if species in self.shortcuts:
-            species = self.shortcuts[species]
+        if species.upper() in self.shortcuts:
+            species = self.shortcuts[species.upper()]
 
         return species, count
     
@@ -339,9 +397,9 @@ class InstaLogApp:
         if not self.csv_path:
             date = datetime.today().strftime('%d%b%Y')
             csv_name = f'{date}_obs'
-            self.csv_path = os.path.join(self.directory, csv_name + '.csv')
+            self.csv_path = os.path.join(self.output_dir, csv_name + '.csv')
             if os.path.exists(self.csv_path):
-                self.csv_path = self.new_csv_path(csv_name, '.csv')
+                self.csv_path = self.new_path(csv_name, '.csv')
         
         with open(self.csv_path, 'w', newline='') as file:
             writer = csv.writer(file)
@@ -349,13 +407,13 @@ class InstaLogApp:
             for row in self.tree.get_children():
                 writer.writerow(self.tree.item(row).get('values'))
 
-    def new_csv_path(self, base_name, extension):
+    def new_path(self, base_name, extension=''):
         counter = 1
         new_name = f'{base_name}{extension}'
-        while os.path.exists(os.path.join(self.directory, new_name)):
+        while os.path.exists(os.path.join(self.output_dir, new_name)):
             new_name = f'{base_name}_{counter}{extension}'
             counter += 1
-        return os.path.join(self.directory, new_name)
+        return os.path.join(self.output_dir, new_name)
 
     def add_row(self):
         '''Retrieves the necessary data, adds a row to the treeview, and updates the CSV'''
