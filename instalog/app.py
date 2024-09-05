@@ -1,25 +1,19 @@
 from .path_utils import internal_path, external_path
 from .editable_treeview import EditableTreeview
 from .action import Action
-
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
-
 import csv
 import os, sys
 import json
-
 from datetime import datetime
 import time
-
 import serial
 import serial.tools.list_ports
 import threading
-
 import pandas as pd
 import geopandas as gpd
 from shapely.geometry import LineString, Point
-
 from collections import deque
 
 class InstaLogApp:
@@ -260,7 +254,7 @@ class InstaLogApp:
                    self.coords[0],
                    self.coords[1]]
             self.track_df.loc[len(self.track_df)] = row
-            time.sleep(3)
+            time.sleep(1)
 
     def make_grid_resizable(self, element, rows, cols):
         '''Makes a grid element's rows and columns resizable'''
