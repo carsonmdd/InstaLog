@@ -34,7 +34,18 @@ class GuiManager(tk.Tk):
         self.create_treeview()
 
     def run(self):
+        self.bind('<Map>', lambda event: self.center_window())
         self.mainloop()
+
+    def center_window(self):
+        self.update_idletasks()
+
+        width = self.winfo_reqwidth()
+        height = self.winfo_reqheight()
+        x = int(self.winfo_screenwidth() * 0.5) - (width // 2)
+        y = int(self.winfo_screenheight() * 0.4) - (height // 2)
+
+        self.geometry(f'{width}x{height}+{x}+{y}')
 
     def get_read_error_status(self):
         return self.read_error_displayed

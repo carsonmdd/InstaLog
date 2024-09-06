@@ -55,7 +55,7 @@ class GpsManager:
                 sys.exit()
 
         if not self.port:
-            messagebox.showerror('Error', f'Could not find a connected GPS')
+            messagebox.showerror('Error', 'Could not find a connected GPS')
             sys.exit()
 
     def init_gps_thread(self):
