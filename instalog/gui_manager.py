@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, filedialog
+from tkinter import ttk, filedialog, messagebox
 from .path_utils import internal_path
 from .editable_treeview import EditableTreeview
 from .action import Action
@@ -10,16 +10,18 @@ import csv
 import os
 
 class GuiManager(tk.Tk):
-    def __init__(self, shortcuts, callback, output_dir):
+    def __init__(self, shortcuts, callback, output_dir, init_port_thread):
         super().__init__()
 
         self.shortcuts = shortcuts
         self.callback = callback
         self.output_dir = output_dir
+        self.init_port_thread = init_port_thread
 
         self.title('InstaLog')
-        self.make_grid_resizable(self, 1, 1)
         self.style = ttk.Style(self)
+        self.make_grid_resizable(self, 1, 1)
+        self.bind('<Map>', lambda event, w=self: self.center_window(self))
         self.undo_stack = deque(maxlen=20)
         self.read_error_displayed = False
         self.csv_path = None
@@ -34,24 +36,47 @@ class GuiManager(tk.Tk):
         self.create_treeview()
 
     def run(self):
-        self.bind('<Map>', lambda event: self.center_window())
+        self.withdraw()
+        self.create_loading_screen()
+        self.init_port_thread()
+
         self.mainloop()
 
-    def center_window(self):
-        self.update_idletasks()
+    def center_window(self, window):
+        window.update_idletasks()
 
-        width = self.winfo_reqwidth()
-        height = self.winfo_reqheight()
-        x = int(self.winfo_screenwidth() * 0.5) - (width // 2)
-        y = int(self.winfo_screenheight() * 0.4) - (height // 2)
+        width = window.winfo_reqwidth()
+        height = window.winfo_reqheight()
+        x = int(window.winfo_screenwidth() * 0.5) - (width // 2)
+        y = int(window.winfo_screenheight() * 0.4) - (height // 2)
 
-        self.geometry(f'{width}x{height}+{x}+{y}')
+        window.geometry(f'{width}x{height}+{x}+{y}')
 
     def get_read_error_status(self):
         return self.read_error_displayed
     
     def get_csv_path(self):
         return self.csv_path
+    
+    def create_loading_screen(self):
+        self.loading_screen = tk.Toplevel()
+        self.loading_screen.geometry('300x200')
+        self.loading_screen.overrideredirect(True)
+        self.loading_label = ttk.Label(self.loading_screen,
+                                 text='Searching for GPS port...',
+                                 font=('TkDefaultFont', 16, 'bold'), 
+                                 anchor='center')
+        self.loading_label.pack(padx=20, pady=20)
+        self.loading_screen.resizable(False, False)
+        self.loading_screen.bind('<Map>', lambda event, w=self.loading_screen: self.center_window(w))
+    
+    def stop_loading(self, res):
+        self.loading_screen.destroy()
+        if res:
+            messagebox.showerror('Error', res)
+            self.quit()
+        else:
+            self.deiconify()
 
     ##################
     # LAYOUT METHODS #

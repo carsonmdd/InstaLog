@@ -2,8 +2,6 @@ import serial
 import serial.tools.list_ports
 import threading
 import time
-from tkinter import messagebox
-import sys
 from datetime import datetime
 import pandas as pd
 
@@ -11,8 +9,6 @@ class GpsManager:
     def __init__(self, baud_rate, callback):
         self.baud_rate = baud_rate
         self.callback = callback
-
-        # self.find_gps_port()
 
         self.coords = (0.0, 0.0)
         self.track_df = pd.DataFrame(columns=['Time', 'Latitude', 'Longitude'])
@@ -23,7 +19,7 @@ class GpsManager:
     def get_coords(self):
         return self.coords
 
-    def find_gps_port(self):
+    def find_gps_port(self) -> bool:
         '''
         - Finds the GPS port by connecting to all ports and looking for specific
         NMEA sentences
@@ -51,17 +47,20 @@ class GpsManager:
                         if self.sentence_types == gps_sentences:
                             return
             except Exception as e:
-                messagebox.showerror('Error', f'Error accessing port {port.device}: {e}')
-                sys.exit()
+                # messagebox.showerror('Error', f'Error accessing port {port.device}: {e}')
+                # return False
+                return f'Error accessing port {port.device}: {e}'
 
         if not self.port:
-            messagebox.showerror('Error', 'Could not find a connected GPS')
-            sys.exit()
+            # messagebox.showerror('Error', 'Could not find a connected GPS')
+            # return False
+            return 'Could not find a connected GPS'
+        
+        return ''
 
     def init_gps_thread(self):
         '''Starts thread for regularly reading coordinates in the background'''
-        self.gps_thread = threading.Thread(target=self.start_reading)
-        self.gps_thread.daemon = True
+        self.gps_thread = threading.Thread(target=self.start_reading, daemon=True)
         self.gps_thread.start()
 
     def start_reading(self):
