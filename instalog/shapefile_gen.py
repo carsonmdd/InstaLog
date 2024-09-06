@@ -14,6 +14,7 @@ class ShapefileGenerator:
         csv_path = self.callback('get csv path')
         track_df = self.callback('get track df')
         if not csv_path:
+            self.callback('destroy')
             return
         
         obs_df = pd.read_csv(csv_path)

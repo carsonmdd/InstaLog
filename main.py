@@ -1,5 +1,6 @@
-from instalog.app import InstaLogApp
+from instalog import create_app
+
+app = create_app()
 
 if __name__ == '__main__':
-    app = InstaLogApp()
     app.run()

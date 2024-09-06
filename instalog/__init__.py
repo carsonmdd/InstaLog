@@ -1,1 +1,4 @@
-# instalog/__init__.py
+from .app import InstaLogApp
+
+def create_app():
+    return InstaLogApp()
