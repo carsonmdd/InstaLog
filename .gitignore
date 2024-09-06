@@ -1,2 +1,4 @@
 .DS_Store
 .venv/
+instalog/__pycache__/
+themes/.DS_Store
