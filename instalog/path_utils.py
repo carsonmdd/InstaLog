@@ -24,3 +24,11 @@ def external_path(relative_path):
         base_path = os.path.abspath('.')
 
     return os.path.join(base_path, relative_path)
+
+def new_path(path):
+    root, ext = os.path.splitext(path)
+    counter = 1
+    while os.path.exists(path):
+        path = f'{root}_{counter}{ext}'
+        counter += 1
+    return path
