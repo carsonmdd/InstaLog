@@ -55,7 +55,9 @@ class GuiManager(tk.Tk):
 
         window.geometry(f'{width}x{height}+{x}+{y}')
 
-    def get_read_error_status(self):
+        window.unbind('<Map>') # Ensures window only resizes initially
+
+    def has_read_error(self):
         '''Returns whether a read error is displayed'''
         return self.read_error_displayed
     

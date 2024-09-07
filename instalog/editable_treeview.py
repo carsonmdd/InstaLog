@@ -67,8 +67,7 @@ class EditableTreeview(ttk.Treeview):
         new_values[col_index] = new_text
         self.item(selected_iid, values=new_values)
 
-        # If num of observers changed,
-        #   updates all num of observers for every row below this row as well
+        # If num of observers changed, updates num of observers for all rows below
         if col_index == 3:
             self.num_observers = new_text
             self.update_obs_below(selected_iid)

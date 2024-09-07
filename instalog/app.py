@@ -75,7 +75,7 @@ class InstaLogApp:
         if req == 'clear errors':
             self.gui.clear_errors()
         elif req == 'has read error':
-            self.gui.get_read_error_status()
+            return self.gui.has_read_error()
         elif req == 'show read error':
             self.gui.show_error('Can\'t read from GPS')
         elif req == 'get csv path':
