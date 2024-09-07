@@ -55,7 +55,7 @@ class GuiManager(tk.Tk):
 
         window.geometry(f'{width}x{height}+{x}+{y}')
 
-        window.unbind('<Map>') # Ensures window only resizes initially
+        window.unbind('<Map>') # Ensures window only centers upon creation
 
     def has_read_error(self):
         '''Returns whether a read error is displayed'''
@@ -320,7 +320,7 @@ class GuiManager(tk.Tk):
         for i in range(len(text)):
             if text[i].isdigit():
                 species = text[:i].strip()
-                count = text[i:].strip()
+                count = self.only_digits(text[i:])
                 break
         
         # If text could not be broken up...
@@ -333,6 +333,9 @@ class GuiManager(tk.Tk):
             species = self.shortcuts[species.upper()]
 
         return species, count
+    
+    def only_digits(self, s):
+        return ''.join([char for char in s if char.isdigit()])
     
     def add_row(self):
         '''Retrieves the necessary data, adds a row to the treeview, and updates the CSV'''
