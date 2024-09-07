@@ -21,10 +21,11 @@ class GuiManager(tk.Tk):
         self.title('InstaLog')
         self.style = ttk.Style(self)
         self.make_grid_resizable(self, 1, 1)
-        self.bind('<Map>', lambda event, w=self: self.center_window(self))
+        self.bind('<Map>', lambda event, w=self: self.center_window(self)) # Centering root immediately upon opening
         self.undo_stack = deque(maxlen=20)
         self.read_error_displayed = False
         self.csv_path = None
+        self.saved = False
 
         self.load_theme()
         self.create_general_frame()
@@ -36,14 +37,16 @@ class GuiManager(tk.Tk):
         self.create_treeview()
 
     def run(self):
-        self.withdraw()
+        '''Runs the GUI'''
+        self.withdraw() # Hide root while loading
         self.create_loading_screen()
         self.init_port_thread()
 
         self.mainloop()
 
     def center_window(self, window):
-        window.update_idletasks()
+        '''Centers given window on screen (slightly higher than middle)'''
+        window.update_idletasks() # Ensures window is fully loaded before getting its dimensions
 
         width = window.winfo_reqwidth()
         height = window.winfo_reqheight()
@@ -53,28 +56,36 @@ class GuiManager(tk.Tk):
         window.geometry(f'{width}x{height}+{x}+{y}')
 
     def get_read_error_status(self):
+        '''Returns whether a read error is displayed'''
         return self.read_error_displayed
     
     def get_csv_path(self):
+        '''Returns path to CSV'''
         return self.csv_path
     
     def create_loading_screen(self):
+        '''Creates loading screen and its features'''
         self.loading_screen = tk.Toplevel()
-        self.loading_screen.geometry('300x200')
         self.loading_screen.overrideredirect(True)
         self.loading_label = ttk.Label(self.loading_screen,
                                  text='Searching for GPS port...',
-                                 font=('TkDefaultFont', 16, 'bold'), 
+                                 font=('TkDefaultFont', 18, 'bold'), 
                                  anchor='center')
-        self.loading_label.pack(padx=20, pady=20)
+        self.loading_label.pack(padx=30, pady=30)
         self.loading_screen.resizable(False, False)
+
+        # Centering loading screen immediately upon opening
         self.loading_screen.bind('<Map>', lambda event, w=self.loading_screen: self.center_window(w))
     
     def stop_loading(self, res):
+        '''Destroys loading screen and processes result of finding gps port'''
         self.loading_screen.destroy()
+        
+        # If the result string isn't empty, there was an error
         if res:
             messagebox.showerror('Error', res)
             self.quit()
+        # Else no error, so show the root
         else:
             self.deiconify()
 
@@ -125,6 +136,7 @@ class GuiManager(tk.Tk):
         self.undo_button.grid(row=4, column=0, padx=15, pady=(0, 15), sticky='nsew')
 
     def create_entry_viewer(self):
+        '''Creates entry viewer'''
         self.viewer_labelframe = ttk.LabelFrame(self.widgets_frame, text='Entry Viewer', labelanchor='n')
         self.viewer_labelframe.grid(row=1, column=0, pady=(0, 100), sticky='nsew')
         self.make_grid_resizable(self.viewer_labelframe, 1, 1)
@@ -136,9 +148,10 @@ class GuiManager(tk.Tk):
         self.viewer = tk.Entry(self.viewer_frame, font=('TkDefaultFont', 16, 'bold'))
         self.viewer.grid(row=0, column=0, padx=5, pady=5, sticky='nsew')
         self.viewer.bind('<Return>', self.on_return)
-        self.viewer.focus_set()
+        self.viewer.focus_set() # Sets focus in entry when main GUI is opened
 
     def on_return(self, event):
+        '''Updates treeview with parsed entry text and clears entry'''
         text = self.viewer.get()
         self.species, self.count = self.parse_text(text)    
         self.add_row()
@@ -174,6 +187,8 @@ class GuiManager(tk.Tk):
         '''Creates and configures the treeview frame'''
         self.tree_frame = ttk.Frame(self.frame)
         self.tree_frame.grid(row=0, column=1, padx=(0, 20), pady=10, sticky='nsew')
+
+        # Custom grid configs to account for scrollbars
         self.tree_frame.grid_rowconfigure(0, weight=1)
         self.tree_frame.grid_columnconfigure(0, weight=1)
         self.tree_frame.grid_rowconfigure(1, weight=0)
@@ -197,9 +212,11 @@ class GuiManager(tk.Tk):
         self.tree_xscroll.grid(row=1, column=0, sticky='ew')
         self.tree_yscroll = ttk.Scrollbar(self.tree_frame, orient='vertical', command=self.tree.yview)
         self.tree_yscroll.grid(row=0, column=1, sticky='ns')
-
+    
+        # Set scrollbar attributes for EditableTreeview class
         self.tree.x_scrollbar = self.tree_xscroll
         self.tree.y_scrollbar = self.tree_yscroll
+
         self.tree.configure(xscrollcommand=self.tree_xscroll.set, yscrollcommand=self.tree_yscroll.set)
 
         self.reset_treeview()
@@ -208,11 +225,8 @@ class GuiManager(tk.Tk):
     # MECHANICS METHODS #
     #####################
 
-    def get_csv_path(self):
-        return self.csv_path
-
     def make_grid_resizable(self, element, rows, cols):
-        '''Makes a grid element's rows and columns resizable'''
+        '''Makes a grid element's rows and columns resizable with equal weights'''
         for i in range(rows):
             element.grid_rowconfigure(i, weight=1)
         for i in range(cols):
@@ -228,6 +242,7 @@ class GuiManager(tk.Tk):
             self.tree.delete(item)
 
     def new_csv(self):
+        '''Resets treeview and CSV path'''
         self.reset_treeview()
         self.csv_path = None
 
@@ -243,18 +258,15 @@ class GuiManager(tk.Tk):
             with open(filepath) as file:
                 csvFile = csv.reader(file)
                 headers = next(csvFile)
-                if headers == list(self.col_widths.keys()):
+                if headers != list(self.col_widths.keys()):
+                    messagebox.showerror('CSV headers do not match')
+                    return
+                else:
                     for heading, width in self.col_widths.items():
                         self.tree.heading(heading, text=heading, anchor='w')
                         self.tree.column(heading, width=width, anchor='w')
-                else:
-                    self.tree['columns'] = headers
-                    for header in headers:
-                        self.tree.heading(header, text=header, anchor='w')
-                        self.tree.column(header, width=200, anchor='w')
-
-                for row in csvFile:
-                    self.tree.insert("", tk.END, values=row)
+                    for row in csvFile:
+                        self.tree.insert("", tk.END, values=row)
 
     def delete_last_row(self):
         '''Deletes the contents of the last row in the treeview'''
@@ -268,24 +280,31 @@ class GuiManager(tk.Tk):
             self.undo_stack.append(Action('delete row', self.undo_delete_last_row, data))
 
     def undo_delete_last_row(self, data):
+        '''Inserts deleted data back into treeview without adding an Action to the undo stack'''
         self.tree.insert("", tk.END, values=data)
         self.tree.yview_moveto(1.0)
         self.save()
 
     def undo(self):
+        '''Calls undo function for most recent Action'''
         if self.undo_stack:
             last_action = self.undo_stack.pop()
             last_action.undo()
 
     def save(self):
-        '''Writes the contents of the treeview to the output csv'''
+        '''Writes the contents of the treeview to the obs csv'''
+        # Creates a new CSV path if it does not exist
+        if not self.saved:
+            self.callback('create output')
+            self.saved = True
+
         if not self.csv_path:
             date = datetime.today().strftime('%d%b%Y')
             csv_name = f'{date}_obs'
             self.csv_path = os.path.join(self.output_dir, csv_name + '.csv')
             if os.path.exists(self.csv_path):
                 self.csv_path = new_path(self.csv_path)
-
+        
         with open(self.csv_path, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(self.tree['columns'])
@@ -294,6 +313,7 @@ class GuiManager(tk.Tk):
                 writer.writerow(row)
 
     def parse_text(self, text: str) -> tuple[str]:
+        '''Parses text for entry cell and returns species name and count'''
         species, count = '', ''
         for i in range(len(text)):
             if text[i].isdigit():
@@ -301,9 +321,12 @@ class GuiManager(tk.Tk):
                 count = text[i:].strip()
                 break
         
+        # If text could not be broken up...
         if species == '':
             species = text.strip()
             count = '0'
+
+        # .upper because all shortcuts are uppercase
         if species.upper() in self.shortcuts:
             species = self.shortcuts[species.upper()]
 
@@ -321,12 +344,13 @@ class GuiManager(tk.Tk):
         row = [species, count, time, obs, comment, latitude, longitude]
         self.tree.insert("", tk.END, values=row)
 
-        self.tree.yview_moveto(1.0)
+        self.tree.yview_moveto(1.0) # Scrolls treeview down if necessary
         self.save()
 
         self.undo_stack.append(Action('add row', self.undo_add_row))
 
     def undo_add_row(self, data):
+        '''Removes last row without adding an Action to the undo stack'''
         if self.tree.get_children():
             last_item = self.tree.get_children()[-1]
             self.tree.delete(last_item)

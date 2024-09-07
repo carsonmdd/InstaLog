@@ -14,7 +14,8 @@ class InstaLogApp:
         self.ask_save_folder()
 
         self.gps = GpsManager(self.settings['baud_rate'],
-                              self.gps_callback)
+                              self.gps_callback,
+                              self.output_dir)
         self.shapefile_gen = ShapefileGenerator(self.output_dir,
                                                 self.shapefile_gen_callback)
         self.gui = GuiManager(self.settings['shortcuts'],
@@ -25,6 +26,7 @@ class InstaLogApp:
         self.gui.protocol('WM_DELETE_WINDOW', self.shapefile_gen.generate)
 
     def run(self):
+        '''Run application'''
         self.gui.run()
 
     def load_settings(self):
@@ -41,10 +43,13 @@ class InstaLogApp:
         return data
 
     def init_port_thread(self):
-        port_thread = threading.Thread(target=self.start_loading, daemon=True)
+        '''Initialize thread to find gps port in the background'''
+        # daemon=True ensures thread terminates when mainloop terminates
+        port_thread = threading.Thread(target=self.load, daemon=True)
         port_thread.start()
 
-    def start_loading(self):
+    def load(self):
+        '''Starts searching for gps and stops loading when finished'''
         res = self.gps.find_gps_port()
         self.gui.stop_loading(res)
 
@@ -57,22 +62,29 @@ class InstaLogApp:
             sys.exit()
 
     def gui_callback(self, req):
+        '''Callback function for GUI manager requests'''
         if req == 'get coords':
             return self.gps.get_coords()
+        elif req == 'create output':
+            self.gps.set_create_output(True)
         else:
             return None
     
     def gps_callback(self, req):
+        '''Callback function for GPS manager requests'''
         if req == 'clear errors':
             self.gui.clear_errors()
         elif req == 'has read error':
             self.gui.get_read_error_status()
         elif req == 'show read error':
             self.gui.show_error('Can\'t read from GPS')
+        elif req == 'get csv path':
+            return self.gui.get_csv_path()
         else:
             return None
         
     def shapefile_gen_callback(self, req):
+        '''Callback function for shapefile generator requests'''
         if req == 'get csv path':
             return self.gui.get_csv_path()
         elif req == 'get track df':

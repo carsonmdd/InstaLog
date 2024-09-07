@@ -26,6 +26,7 @@ def external_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 def new_path(path):
+    '''Creates a unique path using a counter'''
     root, ext = os.path.splitext(path)
     counter = 1
     while os.path.exists(path):

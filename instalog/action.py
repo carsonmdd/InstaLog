@@ -5,4 +5,5 @@ class Action:
         self.data = data
     
     def undo(self):
+        '''Executes undo function for this action'''
         self.undo_function(self.data)
