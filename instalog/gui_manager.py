@@ -24,7 +24,7 @@ class GuiManager(tk.Tk):
         self.bind('<Map>', lambda event, w=self: self.center_window(self)) # Centering root immediately upon opening
         self.undo_stack = deque(maxlen=20)
         self.read_error_displayed = False
-        self.csv_path = None
+        self.obs_csv_path = None
         self.saved = False
 
         self.load_theme()
@@ -61,9 +61,9 @@ class GuiManager(tk.Tk):
         '''Returns whether a read error is displayed'''
         return self.read_error_displayed
     
-    def get_csv_path(self):
+    def get_obs_csv_path(self):
         '''Returns path to CSV'''
-        return self.csv_path
+        return self.obs_csv_path
     
     def create_loading_screen(self):
         '''Creates loading screen and its features'''
@@ -221,6 +221,9 @@ class GuiManager(tk.Tk):
 
         self.tree.configure(xscrollcommand=self.tree_xscroll.set, yscrollcommand=self.tree_yscroll.set)
 
+        for heading, width in self.col_widths.items():
+            self.tree.heading(heading, text=heading, anchor='w')
+            self.tree.column(heading, width=width, anchor='w')
         self.reset_treeview()
 
     #####################
@@ -236,27 +239,36 @@ class GuiManager(tk.Tk):
 
     def reset_treeview(self):
         '''Clears the entries in the current treeview'''
-        for heading, width in self.col_widths.items():
-            self.tree.heading(heading, text=heading, anchor='w')
-            self.tree.column(heading, width=width, anchor='w')
+        # for heading, width in self.col_widths.items():
+        #     self.tree.heading(heading, text=heading, anchor='w')
+        #     self.tree.column(heading, width=width, anchor='w')
 
         for item in self.tree.get_children():
             self.tree.delete(item)
 
     def new_csv(self):
         '''Resets treeview and CSV path'''
+        # Want to save everything before making new CSV
+        if self.obs_csv_path:
+            self.save()
+            self.callback('save work before new')
+
         self.reset_treeview()
-        self.csv_path = None
+        self.obs_csv_path = None
+        self.saved = False
+        data = {
+            'status': False
+        }
+        self.callback('continue data', data)
 
     def load_csv(self):
         '''
         - Prompts the user to select a CSV file
         - If provided, fills the treeview with the entries from the CSV
         '''
-        self.reset_treeview()
-
         filepath = filedialog.askopenfilename(filetypes=[('CSV files', '*.csv')])
         if filepath:
+            self.reset_treeview()
             with open(filepath) as file:
                 csvFile = csv.reader(file)
                 headers = next(csvFile)
@@ -269,6 +281,23 @@ class GuiManager(tk.Tk):
                         self.tree.column(heading, width=width, anchor='w')
                     for row in csvFile:
                         self.tree.insert("", tk.END, values=row)
+
+                self.obs_csv_path = filepath
+
+                filename = os.path.basename(filepath)
+                root, ext = os.path.splitext(filename)
+                # Ex: root = 07Sep2024_obs
+                # Ex: root = 07Sep2024_obs_1
+                parts = root.split('_')
+                date = parts[0]
+                counter = '0' if len(parts) == 2 else parts[2]
+                data = {
+                    'status': True,
+                    'date': date,
+                    'counter': counter
+                }
+                self.save()
+                self.callback('continue data', data)
 
     def delete_last_row(self):
         '''Deletes the contents of the last row in the treeview'''
@@ -296,23 +325,24 @@ class GuiManager(tk.Tk):
     def save(self):
         '''Writes the contents of the treeview to the obs csv'''
         # Creates a new CSV path if it does not exist
-        if not self.saved:
-            self.callback('create output')
-            self.saved = True
-
-        if not self.csv_path:
+        if not self.obs_csv_path:
             date = datetime.today().strftime('%d%b%Y')
             csv_name = f'{date}_obs'
-            self.csv_path = os.path.join(self.output_dir, csv_name + '.csv')
-            if os.path.exists(self.csv_path):
-                self.csv_path = new_path(self.csv_path)
+            self.obs_csv_path = os.path.join(self.output_dir, csv_name + '.csv')
+            if os.path.exists(self.obs_csv_path):
+                self.obs_csv_path = new_path(self.obs_csv_path)
         
-        with open(self.csv_path, 'w', newline='') as file:
+        with open(self.obs_csv_path, 'w', newline='') as file:
             writer = csv.writer(file)
             writer.writerow(self.tree['columns'])
             for child in self.tree.get_children():
                 row = self.tree.item(child).get('values')
                 writer.writerow(row)
+
+        if not self.saved:
+            # Tells other managers to create output if current doc has been saved
+            self.callback('set create output', True)
+            self.saved = True
 
     def parse_text(self, text: str) -> tuple[str]:
         '''Parses text for entry cell and returns species name and count'''

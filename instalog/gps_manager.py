@@ -18,6 +18,8 @@ class GpsManager:
         self.coords = (0.0, 0.0)
         self.track_df = pd.DataFrame(columns=['Time', 'Latitude', 'Longitude'])
         self.csv_path = None
+        self.date = None
+        self.counter = None
     
     def get_track_df(self):
         '''Returns track dataframe'''
@@ -30,6 +32,21 @@ class GpsManager:
     def set_create_output(self, create_output):
         '''Sets self.create_output'''
         self.create_output = create_output
+
+    def continue_data(self, data):
+        '''Updates attributes for when old data is being added on to'''
+        if not data.get('status'):
+            self.csv_path = None
+            self.track_df = pd.DataFrame(columns=['Time', 'Latitude', 'Longitude'])
+            self.create_output = False
+        else:
+            date = data['date']
+            counter = data['counter']
+            csv_name = f'{date}_track.csv' if counter == '0' else f'{date}_track_{counter}.csv'
+            self.csv_path = os.path.join(self.output_dir, csv_name)
+            # old_track_df = pd.read_csv(self.csv_path)
+            # self.track_df = pd.concat([old_track_df, self.track_df], ignore_index=True)
+            self.track_df = pd.read_csv(self.csv_path)
 
     def find_gps_port(self) -> str:
         '''
@@ -48,7 +65,8 @@ class GpsManager:
             try:
                 with serial.Serial(port.device, baudrate=self.baud_rate, timeout=1) as ser:
                     start_time = time.time()
-                    while time.time() - start_time < 5: # Listening on each port for 5 seconds max
+                    # CHANGE TO 5 SECONDS SEARCHING ##########################
+                    while time.time() - start_time < 3: # Listening on each port for 5 seconds max
                         data = ser.readline()
                         for i in range(len(gps_sentences)): # Checking if the line read is a valid sentence type
                             sentence_bytes = gps_sentences[i].encode('utf-8')
@@ -82,6 +100,9 @@ class GpsManager:
             row = [datetime.now().time().replace(microsecond=0),
                    self.coords[0],
                    self.coords[1]]
+            # print()
+            # print(self.track_df.columns)
+            # print()
             self.track_df.loc[len(self.track_df)] = row # Adding every coord read w/ timestamp to track dataframe
             self.save()
             time.sleep(1)

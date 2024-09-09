@@ -9,26 +9,35 @@ class ShapefileGenerator:
     def __init__(self, output_dir, callback):
         self.output_dir = output_dir
         self.callback = callback
+
+        self.date = None
+        self.counter = None
     
+    def continue_data(self, data):
+        '''Updates attributes for when old data is being added on to'''
+        if not data.get('status'):
+            self.date = None
+            self.counter = None
+        else:
+            self.date = data['date']
+            self.counter = data['counter']
+
     def generate(self):
         '''Starts shapefile generation'''
-        csv_path = self.callback('get csv path')
+        obs_csv_path = self.callback('get obs csv path')
         track_df = self.callback('get track df')
 
         # If nothing has been saved, csv_path will be "None," so terminate program
-        if not csv_path:
-            self.callback('destroy')
+        if not obs_csv_path:
             return
         
-        obs_df = pd.read_csv(csv_path)
+        obs_df = pd.read_csv(obs_csv_path)
 
         self.add_obs_geometry(obs_df)
         self.add_track_geometry(track_df)
 
         self.write_shapefile('track', track_df)
         self.write_shapefile('obs', obs_df)
-
-        self.callback('destroy')
 
     def add_obs_geometry(self, df):
         '''Adds geometry column of "Point" objects to provided dataframe'''
@@ -59,12 +68,18 @@ class ShapefileGenerator:
         gdf = gpd.GeoDataFrame(df, geometry='Geometry')
         gdf.set_crs(epsg=4326, inplace=True)
 
-        date = datetime.today().strftime('%d%b%Y')
-        name = f'{date}_{type}'
-        dir = f'{self.output_dir}/{name}'
-        if os.path.exists(dir):
-            dir = new_path(dir)
-        output_path = os.path.join(dir, name + '.shp')
+        if self.date:
+            dir_name = f'{self.date}_{type}' if self.counter == '0' else f'{self.date}_{type}_{self.counter}'
+            filename = dir_name + '.shp'
+            output_path = os.path.join(self.output_dir, dir_name, filename)
+        else:
+            date = datetime.today().strftime('%d%b%Y')
+            name = f'{date}_{type}'
+            dir = f'{self.output_dir}/{name}'
+            if os.path.exists(dir):
+                dir = new_path(dir)
+            output_path = os.path.join(dir, name + '.shp')
 
-        os.makedirs(dir, exist_ok=True) # Need to make directory before writing
+            os.makedirs(dir, exist_ok=True) # Need to make directory before writing
+
         gdf.to_file(output_path)
