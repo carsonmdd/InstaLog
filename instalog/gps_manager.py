@@ -5,7 +5,6 @@ import time
 from datetime import datetime
 import pandas as pd
 import os
-import csv
 from .path_utils import new_path
 
 class GpsManager:

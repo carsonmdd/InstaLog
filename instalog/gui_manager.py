@@ -268,12 +268,15 @@ class GuiManager(tk.Tk):
         '''
         filepath = filedialog.askopenfilename(filetypes=[('CSV files', '*.csv')])
         if filepath:
+            if not self.loaded_csv_valid(filepath):
+                messagebox.showerror('Error', 'Invalid filename')
+                return
             self.reset_treeview()
             with open(filepath) as file:
                 csvFile = csv.reader(file)
                 headers = next(csvFile)
                 if headers != list(self.col_widths.keys()):
-                    messagebox.showerror('CSV headers do not match')
+                    messagebox.showerror('Error', 'CSV headers do not match')
                     return
                 else:
                     for heading, width in self.col_widths.items():
@@ -298,6 +301,22 @@ class GuiManager(tk.Tk):
                 }
                 self.save()
                 self.callback('continue data', data)
+
+    def loaded_csv_valid(self, filepath) -> bool:
+        filename = os.path.basename(filepath)
+        name, ext = os.path.splitext(filename)
+
+        parts = name.split('_')
+        if len(parts) == 2:
+            if len(parts[0]) != 9 or parts[1] != 'obs':
+                return False
+        elif len(parts) == 3:
+            if len(parts[0]) != 9 or parts[1] != 'obs' or not parts[2].isdigit():
+                return False
+        else:
+            return False
+        
+        return True
 
     def delete_last_row(self):
         '''Deletes the contents of the last row in the treeview'''
