@@ -275,6 +275,16 @@ class GuiManager(tk.Tk):
                     for row in csvFile:
                         self.tree.insert("", tk.END, values=row)
 
+                items = self.tree.get_children()
+                if items:
+                    last_item = items[-1]
+                    vals = self.tree.item(last_item).get('values')
+                    obs = int(vals[3])
+                    coords = (float(vals[5]), float(vals[6]))
+                self.tree.set_num_observers(obs)
+                data = {'coords': coords}
+                self.callback('set coords', data)
+
                 self.obs_csv_path = filepath
 
                 filename = os.path.basename(filepath)

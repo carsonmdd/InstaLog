@@ -83,6 +83,8 @@ class InstaLogApp:
         elif req == 'save work before new':
             self.gps.save()
             self.shapefile_gen.generate()
+        elif req == 'set coords':
+            self.gps.set_coords(data['coords'])
         else:
             return None
     

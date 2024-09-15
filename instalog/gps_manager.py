@@ -28,8 +28,12 @@ class GpsManager:
         '''Returns last recorded coordinates'''
         return self.coords
     
+    def set_coords(self, coords):
+        '''Sets self.coords to given value'''
+        self.coords = coords
+    
     def set_create_output(self, create_output):
-        '''Sets self.create_output'''
+        '''Sets self.create_output to given value'''
         self.create_output = create_output
 
     def continue_data(self, data):
