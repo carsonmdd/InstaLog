@@ -3,13 +3,6 @@ from tkinter import ttk
 
 class EditableTreeview(ttk.Treeview):
     def __init__(self, master, save_func, **kwargs):
-        '''
-        - When double click cell, create entry
-        - When focusout of entry, destroy entry
-        - When scroll using mouse or scrollbars, destroy entry
-        - When enter pressed, update info in cell and destroy entry
-        '''
-        
         super().__init__(master, **kwargs)
         self.save = save_func
 
@@ -50,7 +43,6 @@ class EditableTreeview(ttk.Treeview):
         self.entry.bind('<Return>', self.on_enter)
         self.bind('<MouseWheel>', self.hide_entry)
         self.bind('<Shift-MouseWheel>', self.hide_entry)
-        self.x_scrollbar.bind('<B1-Motion>', self.hide_entry)
         self.y_scrollbar.bind('<B1-Motion>', self.hide_entry)
 
         self.entry.place(x=cell_box[0],
@@ -59,7 +51,7 @@ class EditableTreeview(ttk.Treeview):
                     h=cell_box[3])
 
     def hide_entry(self, event):
-        '''Destroys entry if it exists'''
+        '''Hides entry'''
         self.entry.place_forget()
 
     def on_enter(self, event):

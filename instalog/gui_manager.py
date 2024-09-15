@@ -186,7 +186,6 @@ class GuiManager(tk.Tk):
         # Custom grid configs to account for scrollbars
         self.tree_frame.grid_rowconfigure(0, weight=1)
         self.tree_frame.grid_columnconfigure(0, weight=1)
-        self.tree_frame.grid_rowconfigure(1, weight=0)
         self.tree_frame.grid_columnconfigure(1, weight=0)
     
     def create_treeview(self):
@@ -207,16 +206,13 @@ class GuiManager(tk.Tk):
                                      height=20)
         self.tree.grid(row=0, column=0, sticky='nsew')
 
-        self.tree_xscroll = ttk.Scrollbar(self.tree_frame, orient='horizontal', command=self.tree.xview)
-        self.tree_xscroll.grid(row=1, column=0, sticky='ew')
         self.tree_yscroll = ttk.Scrollbar(self.tree_frame, orient='vertical', command=self.tree.yview)
         self.tree_yscroll.grid(row=0, column=1, sticky='ns')
     
         # Set scrollbar attributes for EditableTreeview class
-        self.tree.x_scrollbar = self.tree_xscroll
         self.tree.y_scrollbar = self.tree_yscroll
 
-        self.tree.configure(xscrollcommand=self.tree_xscroll.set, yscrollcommand=self.tree_yscroll.set)
+        self.tree.configure(yscrollcommand=self.tree_yscroll.set)
 
         for heading, width in self.col_widths.items():
             self.tree.heading(heading, text=heading, anchor='w')
