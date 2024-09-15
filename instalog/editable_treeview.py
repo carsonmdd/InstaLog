@@ -12,6 +12,7 @@ class EditableTreeview(ttk.Treeview):
         self.bind('<Double-1>', self.on_double_click)
 
     def set_num_observers(self, num_observers):
+        '''Sets self.num_observers to given value'''
         self.num_observers = num_observers
 
     def on_double_click(self, event):

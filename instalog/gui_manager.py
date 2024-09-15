@@ -303,6 +303,7 @@ class GuiManager(tk.Tk):
                 self.callback('continue data', data)
 
     def loaded_csv_valid(self, filepath) -> bool:
+        '''Checks a few conditions to determine whether csv name is formatted correctly'''
         filename = os.path.basename(filepath)
         name, ext = os.path.splitext(filename)
 
@@ -354,7 +355,7 @@ class GuiManager(tk.Tk):
         for i in range(len(text)):
             if text[i].isdigit():
                 species = text[:i].strip()
-                count = self.only_digits(text[i:])
+                count = self.only_digits(text[i:]) # Take only digits in case of typos in count
                 break
         
         # If text could not be broken up...
@@ -367,6 +368,10 @@ class GuiManager(tk.Tk):
             species = self.shortcuts[species.upper()]
 
         return species, count
+    
+    def only_digits(self, s):
+        '''Returns given string with only its digits'''
+        return ''.join([char for char in s if char.isdigit()])
 
     def save(self):
         '''Writes the contents of the treeview to the obs csv'''
@@ -389,9 +394,6 @@ class GuiManager(tk.Tk):
             # Tells other managers to create output if current doc has been saved
             self.callback('set create output', True)
             self.saved = True
-    
-    def only_digits(self, s):
-        return ''.join([char for char in s if char.isdigit()])
     
     def add_row(self):
         '''Retrieves the necessary data, adds a row to the treeview, and updates the CSV'''

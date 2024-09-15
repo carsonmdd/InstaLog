@@ -27,7 +27,7 @@ class ShapefileGenerator:
         obs_csv_path = self.callback('get obs csv path')
         track_df = self.callback('get track df')
 
-        # If nothing has been saved, csv_path will be "None," so terminate program
+        # If nothing has been saved, csv_path will be "None", so terminate program
         if not obs_csv_path:
             return
         
