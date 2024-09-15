@@ -13,18 +13,18 @@ class InstaLogApp:
         self.settings = self.load_settings()
         self.ask_save_folder()
 
-        self.gps = GpsManager(self.settings['baud_rate'],
+        self.gps = GpsManager(self.settings.get('baud_rate'),
                               self.gps_callback,
                               self.output_dir)
         self.shapefile_gen = ShapefileGenerator(self.output_dir,
                                                 self.shapefile_gen_callback)
-        self.gui = GuiManager(self.settings['shortcuts'],
+        self.gui = GuiManager(self.settings.get('shortcuts'),
                               self.gui_callback,
                               self.output_dir,
                               self.init_port_thread)
 
         self.gui.protocol('WM_DELETE_WINDOW', lambda: (self.shapefile_gen.generate(), self.gui.destroy()))
-
+                                                                                              
     def run(self):
         '''Run application'''
         self.gui.run()
@@ -40,7 +40,14 @@ class InstaLogApp:
             messagebox.showerror('Error', f'Error opening settings file: {e}')
             sys.exit()
 
-        return data
+        if not data.get('baud_rate'):
+            messagebox.showerror('Error', 'No baud_rate found in settings')
+            sys.exit()
+        elif not data.get('shortcuts'):
+            messagebox.showerror('Error', 'No shortcuts found in settings')
+            sys.exit()
+        else:
+            return data
 
     def init_port_thread(self):
         '''Initialize thread to find gps port in the background'''

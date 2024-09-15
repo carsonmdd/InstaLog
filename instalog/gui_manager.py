@@ -21,7 +21,7 @@ class GuiManager(tk.Tk):
         self.title('InstaLog')
         self.style = ttk.Style(self)
         self.make_grid_resizable(self, 1, 1)
-        self.bind('<Map>', lambda event, w=self: self.center_window(self)) # Centering root immediately upon opening
+        self.bind('<Map>', lambda event, w=self: self.center_window(w)) # Centering root immediately upon opening
         self.undo_stack = deque(maxlen=20)
         self.read_error_displayed = False
         self.obs_csv_path = None
@@ -152,13 +152,6 @@ class GuiManager(tk.Tk):
         self.viewer.bind('<Return>', self.on_return)
         self.viewer.focus_set() # Sets focus in entry when main GUI is opened
 
-    def on_return(self, event):
-        '''Updates treeview with parsed entry text and clears entry'''
-        text = self.viewer.get()
-        self.species, self.count = self.parse_text(text)    
-        self.add_row()
-        self.viewer.delete(0, tk.END)
-
     def create_error_panel(self):
         '''Creates error panel'''
         self.error_labelframe = ttk.LabelFrame(self.widgets_frame, text='Error Log', labelanchor='n')
@@ -207,7 +200,11 @@ class GuiManager(tk.Tk):
             'Latitude': 150,
             'Longitude': 150
         }
-        self.tree = EditableTreeview(self.tree_frame, show='headings', columns=list(self.col_widths.keys()), height=20)
+        self.tree = EditableTreeview(self.tree_frame,
+                                     self.save,
+                                     show='headings',
+                                     columns=list(self.col_widths.keys()),
+                                     height=20)
         self.tree.grid(row=0, column=0, sticky='nsew')
 
         self.tree_xscroll = ttk.Scrollbar(self.tree_frame, orient='horizontal', command=self.tree.xview)
@@ -224,6 +221,7 @@ class GuiManager(tk.Tk):
         for heading, width in self.col_widths.items():
             self.tree.heading(heading, text=heading, anchor='w')
             self.tree.column(heading, width=width, anchor='w')
+
         self.reset_treeview()
 
     #####################
@@ -239,15 +237,14 @@ class GuiManager(tk.Tk):
 
     def reset_treeview(self):
         '''Clears the entries in the current treeview'''
-        # for heading, width in self.col_widths.items():
-        #     self.tree.heading(heading, text=heading, anchor='w')
-        #     self.tree.column(heading, width=width, anchor='w')
-
         for item in self.tree.get_children():
             self.tree.delete(item)
 
     def new_csv(self):
-        '''Resets treeview and CSV path'''
+        '''
+        - Saves all work before resetting
+        - Resets treeview and relevant attributes
+        '''
         # Want to save everything before making new CSV
         if self.obs_csv_path:
             self.save()
@@ -279,9 +276,6 @@ class GuiManager(tk.Tk):
                     messagebox.showerror('Error', 'CSV headers do not match')
                     return
                 else:
-                    for heading, width in self.col_widths.items():
-                        self.tree.heading(heading, text=heading, anchor='w')
-                        self.tree.column(heading, width=width, anchor='w')
                     for row in csvFile:
                         self.tree.insert("", tk.END, values=row)
 
@@ -341,6 +335,33 @@ class GuiManager(tk.Tk):
             last_action = self.undo_stack.pop()
             last_action.undo()
 
+    def on_return(self, event):
+        '''Updates treeview with parsed entry text and clears entry'''
+        text = self.viewer.get()
+        self.species, self.count = self.parse_text(text)    
+        self.add_row()
+        self.viewer.delete(0, tk.END)
+
+    def parse_text(self, text: str) -> tuple[str]:
+        '''Parses text for entry cell and returns species name and count'''
+        species, count = '', ''
+        for i in range(len(text)):
+            if text[i].isdigit():
+                species = text[:i].strip()
+                count = self.only_digits(text[i:])
+                break
+        
+        # If text could not be broken up...
+        if species == '':
+            species = text.strip()
+            count = '0'
+
+        # .upper because all shortcuts are uppercase
+        if species.upper() in self.shortcuts:
+            species = self.shortcuts[species.upper()]
+
+        return species, count
+
     def save(self):
         '''Writes the contents of the treeview to the obs csv'''
         # Creates a new CSV path if it does not exist
@@ -362,26 +383,6 @@ class GuiManager(tk.Tk):
             # Tells other managers to create output if current doc has been saved
             self.callback('set create output', True)
             self.saved = True
-
-    def parse_text(self, text: str) -> tuple[str]:
-        '''Parses text for entry cell and returns species name and count'''
-        species, count = '', ''
-        for i in range(len(text)):
-            if text[i].isdigit():
-                species = text[:i].strip()
-                count = self.only_digits(text[i:])
-                break
-        
-        # If text could not be broken up...
-        if species == '':
-            species = text.strip()
-            count = '0'
-
-        # .upper because all shortcuts are uppercase
-        if species.upper() in self.shortcuts:
-            species = self.shortcuts[species.upper()]
-
-        return species, count
     
     def only_digits(self, s):
         return ''.join([char for char in s if char.isdigit()])

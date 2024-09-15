@@ -2,10 +2,18 @@ import tkinter as tk
 from tkinter import ttk
 
 class EditableTreeview(ttk.Treeview):
-    def __init__(self, master, **kwargs):
+    def __init__(self, master, save_func, **kwargs):
+        '''
+        - When double click cell, create entry
+        - When focusout of entry, destroy entry
+        - When scroll using mouse or scrollbars, destroy entry
+        - When enter pressed, update info in cell and destroy entry
+        '''
+        
         super().__init__(master, **kwargs)
+        self.save = save_func
 
-        self.entry = None
+        self.entry = ttk.Entry(self)
         self.num_observers = 2
 
         self.bind('<Double-1>', self.on_double_click)
@@ -25,54 +33,52 @@ class EditableTreeview(ttk.Treeview):
         cell_box = self.bbox(selected_iid, col_index)
 
         selected_text = self.item(selected_iid).get('values')[col_index]
-    
-        self.entry = ttk.Entry(self)
 
         # Set these attributes for later use when "Enter" is pressed
         self.entry.selected_iid = selected_iid
         self.entry.col_index = col_index
 
         # Inserting original text from cell into entry
+        self.entry.delete(0, tk.END)
         self.entry.insert(0, selected_text)
         self.entry.select_range(0, tk.END)
-        self.entry.focus()
+        self.entry.focus_set()
 
         # "Return" updates the cell's text
         # Leaving the entry or scrolling destroys the entry
-        self.entry.bind('<FocusOut>', self.destroy_entry)
+        self.entry.bind('<FocusOut>', self.hide_entry)
         self.entry.bind('<Return>', self.on_enter)
-        self.bind('<MouseWheel>', self.destroy_entry)
-        self.bind('<Shift-MouseWheel>', self.destroy_entry)
-        self.x_scrollbar.bind('<B1-Motion>', self.destroy_entry)
-        self.y_scrollbar.bind('<B1-Motion>', self.destroy_entry)
+        self.bind('<MouseWheel>', self.hide_entry)
+        self.bind('<Shift-MouseWheel>', self.hide_entry)
+        self.x_scrollbar.bind('<B1-Motion>', self.hide_entry)
+        self.y_scrollbar.bind('<B1-Motion>', self.hide_entry)
 
         self.entry.place(x=cell_box[0],
                     y=cell_box[1],
                     w=cell_box[2],
                     h=cell_box[3])
 
-    def destroy_entry(self, event):
+    def hide_entry(self, event):
         '''Destroys entry if it exists'''
-        if self.entry.winfo_exists():
-            self.entry.destroy()
+        self.entry.place_forget()
 
     def on_enter(self, event):
         '''Updates corresponding treeview cell(s) with entry text'''
         new_text = self.entry.get()
-
         selected_iid = self.entry.selected_iid
         col_index = self.entry.col_index
 
         new_values = self.item(selected_iid).get('values')
         new_values[col_index] = new_text
-        self.item(selected_iid, values=new_values)
+        self.item(selected_iid, values=new_values) # Updating row with new values
 
         # If num of observers changed, updates num of observers for all rows below
         if col_index == 3:
             self.num_observers = new_text
             self.update_obs_below(selected_iid)
 
-        self.entry.destroy()
+        self.save()
+        self.entry.place_forget()
 
     def update_obs_below(self, start_iid):
         '''Updates all rows below start_iid with start_iid's number of observers'''
