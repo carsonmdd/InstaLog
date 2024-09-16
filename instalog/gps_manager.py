@@ -95,7 +95,7 @@ class GpsManager:
 
     def start_reading(self):
         '''Tries to read coordinates every 2 seconds'''
-        time.sleep(1)
+        time.sleep(1) # Wait 1 sec to ensure serial port was properly closed before opening again
         with serial.Serial(port=self.port, baudrate=self.baud_rate, timeout=1) as ser:
             while True:
                 self.coords = self.read_coords(ser)
