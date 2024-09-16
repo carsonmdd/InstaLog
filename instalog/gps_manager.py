@@ -95,16 +95,18 @@ class GpsManager:
 
     def start_reading(self):
         '''Tries to read coordinates every 2 seconds'''
-        while True:
-            self.coords = self.read_coords()
-            row = [datetime.now().time().replace(microsecond=0),
-                   self.coords[0],
-                   self.coords[1]]
-            self.track_df.loc[len(self.track_df)] = row # Adding every coord read w/ timestamp to track dataframe
-            self.save()
-            time.sleep(2)
+        time.sleep(1)
+        with serial.Serial(port=self.port, baudrate=self.baud_rate, timeout=1) as ser:
+            while True:
+                self.coords = self.read_coords(ser)
+                row = [datetime.now().time().replace(microsecond=0),
+                    self.coords[0],
+                    self.coords[1]]
+                self.track_df.loc[len(self.track_df)] = row # Adding every coord read w/ timestamp to track dataframe
+                self.save()
+                time.sleep(2)
 
-    def read_coords(self) -> tuple[float]:
+    def read_coords(self, ser) -> tuple[float]:
         '''
         - Attempts to read and return coordinates from the GPS
         - Upon failure, displays an error message in the GUI and returns
@@ -113,47 +115,46 @@ class GpsManager:
         lat, lon = 0.0, 0.0
 
         start_time = time.time()
-        with serial.Serial(port=self.port, baudrate=self.baud_rate, timeout=1) as ser:
-            # Read for valid sentence with valid data for 5 seconds
-            while time.time() - start_time < 5:
-                num_types = sum(element != None for element in self.sentence_types)
-                line = ser.readline().decode('utf-8', errors='replace')
-                if line.startswith(self.sentence_types[0]):
-                    # Ex: $GPGGA,123519.00,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47
-                    parts = line.split(',')
-                    try: # Use try-except for cases where sentence is incomplete
-                        if parts[6] == '1' or parts[6] == '2':
-                            lat, lon = self.ddm2dd(((parts[2], parts[3]), (parts[4], parts[5])))
-                            self.coords = lat, lon
-                            if self.callback('has read error'):
-                                self.callback('clear errors')
-                        break
-                    except:
-                        pass
-                elif num_types >= 2 and line.startswith(self.sentence_types[1]):
-                    # Ex: $GPRMC,123519.00,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A
-                    parts = line.split(',')
-                    try:
-                        if parts[2] == 'A':
-                            lat, lon = self.ddm2dd(((parts[3], parts[4]), (parts[5], parts[6])))
-                            self.coords = lat, lon
-                            if self.callback('has read error'):
-                                self.callback('clear errors')
-                        break
-                    except:
-                        pass
-                elif num_types == 3 and line.startswith(self.sentence_types[2]):
-                    # Ex: $GPGLL,4807.038,N,01131.000,E,013604,A,A*54
-                    parts = line.split(',')
-                    try:
-                        if parts[6] == 'A':
-                            lat, lon = self.ddm2dd(((parts[1], parts[2]), (parts[3], parts[4])))
-                            self.coords = lat, lon
-                            if self.callback('has read error'):
-                                self.callback('clear errors')
-                        break
-                    except:
-                        pass
+        # Read for valid sentence with valid data for 5 seconds
+        while time.time() - start_time < 5:
+            num_types = sum(element != None for element in self.sentence_types)
+            line = ser.readline().decode('utf-8', errors='replace')
+            if line.startswith(self.sentence_types[0]):
+                # Ex: $GPGGA,123519.00,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47
+                parts = line.split(',')
+                try: # Use try-except for cases where sentence is incomplete
+                    if parts[6] == '1' or parts[6] == '2':
+                        lat, lon = self.ddm2dd(((parts[2], parts[3]), (parts[4], parts[5])))
+                        self.coords = lat, lon
+                        if self.callback('has read error'):
+                            self.callback('clear errors')
+                    break
+                except:
+                    pass
+            elif num_types >= 2 and line.startswith(self.sentence_types[1]):
+                # Ex: $GPRMC,123519.00,A,4807.038,N,01131.000,E,022.4,084.4,230394,003.1,W*6A
+                parts = line.split(',')
+                try:
+                    if parts[2] == 'A':
+                        lat, lon = self.ddm2dd(((parts[3], parts[4]), (parts[5], parts[6])))
+                        self.coords = lat, lon
+                        if self.callback('has read error'):
+                            self.callback('clear errors')
+                    break
+                except:
+                    pass
+            elif num_types == 3 and line.startswith(self.sentence_types[2]):
+                # Ex: $GPGLL,4807.038,N,01131.000,E,013604,A,A*54
+                parts = line.split(',')
+                try:
+                    if parts[6] == 'A':
+                        lat, lon = self.ddm2dd(((parts[1], parts[2]), (parts[3], parts[4])))
+                        self.coords = lat, lon
+                        if self.callback('has read error'):
+                            self.callback('clear errors')
+                    break
+                except:
+                    pass
         # Shows read error if coords could not be updated and read error isn't already shown
         if (lat, lon) == (0.0, 0.0) and not self.callback('has read error'):
             self.callback('show read error')
