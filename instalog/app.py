@@ -3,7 +3,6 @@ from tkinter import filedialog, messagebox
 import os, sys
 import json
 import threading
-import threading
 
 from .shapefile_gen import ShapefileGenerator
 from .gps_manager import GpsManager
