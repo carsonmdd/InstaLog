@@ -14,7 +14,7 @@ def internal_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 def external_path(relative_path):
-    '''Gets path for resource in same directory as app file on macOS'''
+    '''Gets path for resource in same directory as exe file on Windows'''
     # If running as exe,
     if getattr(sys, 'frozen', False):
         exe_path = os.path.abspath(sys.executable)
