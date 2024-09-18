@@ -65,6 +65,7 @@ class InstaLogApp:
         home_directory = os.path.expanduser('~')
         desktop_path = os.path.join(home_directory, 'Desktop')
         self.output_dir = filedialog.askdirectory(initialdir=desktop_path, title='Select a directory')
+        print(self.output_dir)
         if not self.output_dir:
             sys.exit()
 
