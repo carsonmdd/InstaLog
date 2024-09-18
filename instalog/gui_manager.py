@@ -408,7 +408,7 @@ class GuiManager(tk.Tk):
         '''Retrieves the necessary data, adds a row to the treeview, and updates the CSV'''
         species = self.species
         count = self.count
-        time = datetime.now().time().replace(microsecond=0)
+        time = self.callback('get time')
         obs = self.tree.num_observers
         comment = ''
         latitude, longitude = self.callback('get coords')

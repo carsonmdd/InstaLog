@@ -38,7 +38,10 @@ class GpsManager:
         self.coords = coords
     
     def set_create_output(self, create_output):
-        '''Sets self.create_output to given value'''
+        '''
+        - Writes headers to csv if creating output for first time and new csv
+        - Sets self.create_output to given value
+        '''
         if (not self.create_output and create_output) and not self.csv_path:
             date = datetime.today().strftime('%d%b%Y')
             csv_name = f'{date}_track'

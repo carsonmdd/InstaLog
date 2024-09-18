@@ -18,7 +18,7 @@ def external_path(relative_path):
     # If running as exe,
     if getattr(sys, 'frozen', False):
         exe_path = os.path.abspath(sys.executable)
-        base_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(exe_path))))
+        base_path = os.path.dirname(exe_path)
     # else running as script
     else:
         base_path = os.path.abspath('.')
