@@ -119,9 +119,7 @@ class GpsManager:
             while True:
                 self.coords = self.read_coords(ser)
                 self.time = datetime.now().time().replace(microsecond=0)
-                row = [self.time,
-                    self.coords[0],
-                    self.coords[1]]
+                row = [self.time, self.coords[0], self.coords[1]]
                 
                 try:
                     self.temp_track_df.loc[len(self.temp_track_df)] = row
