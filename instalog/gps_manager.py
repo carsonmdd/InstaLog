@@ -131,7 +131,7 @@ class GpsManager:
 
             time.sleep(2)
 
-    def read_coords(self, ser) -> tuple[float]:
+    def read_coords(self) -> tuple[float]:
         '''
         - Attempts to read and return coordinates from the GPS
         - Upon failure, displays an error message in the GUI and returns
