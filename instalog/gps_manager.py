@@ -4,6 +4,7 @@ import threading
 import time
 from datetime import datetime
 import pandas as pd
+import csv
 import os
 from .path_utils import new_path
 
@@ -15,14 +16,18 @@ class GpsManager:
         self.create_output = create_output
 
         self.coords = (0.0, 0.0)
-        self.track_df = pd.DataFrame(columns=['Time', 'Latitude', 'Longitude'])
+        self.time = None
+        self.temp_track_df = pd.DataFrame(columns=['Time', 'Latitude', 'Longitude'])
         self.csv_path = None
         self.date = None
         self.counter = None
     
-    def get_track_df(self):
-        '''Returns track dataframe'''
-        return self.track_df
+    def get_time(self):
+        return self.time
+
+    def get_track_csv_path(self):
+        '''Returns track csv path'''
+        return self.csv_path
     
     def get_coords(self):
         '''Returns last recorded coordinates'''
@@ -34,20 +39,31 @@ class GpsManager:
     
     def set_create_output(self, create_output):
         '''Sets self.create_output to given value'''
+        if (not self.create_output and create_output) and not self.csv_path:
+            date = datetime.today().strftime('%d%b%Y')
+            csv_name = f'{date}_track'
+            self.csv_path = os.path.join(self.output_dir, csv_name + '.csv')
+            if os.path.exists(self.csv_path):
+                self.csv_path = new_path(self.csv_path)
+
+            headers = ['Time', 'Latitude', 'Longitude']
+            with open(self.csv_path, mode='w', newline='') as file:
+                writer = csv.writer(file)
+                writer.writerow(headers)
+
         self.create_output = create_output
 
     def continue_data(self, data):
         '''Updates attributes for when old data is being added on to'''
         if not data.get('status'):
             self.csv_path = None
-            self.track_df = pd.DataFrame(columns=['Time', 'Latitude', 'Longitude'])
             self.create_output = False
         else:
             date = data['date']
             counter = data['counter']
             csv_name = f'{date}_track.csv' if counter == '0' else f'{date}_track_{counter}.csv'
+
             self.csv_path = os.path.join(self.output_dir, csv_name)
-            self.track_df = pd.read_csv(self.csv_path)
 
     def find_gps_port(self) -> str:
         '''
@@ -102,8 +118,15 @@ class GpsManager:
                 row = [datetime.now().time().replace(microsecond=0),
                     self.coords[0],
                     self.coords[1]]
-                self.track_df.loc[len(self.track_df)] = row # Adding every coord read w/ timestamp to track dataframe
-                self.save()
+                
+                try:
+                    self.temp_track_df.loc[len(self.temp_track_df)] = row # Adding every coord read w/ timestamp to track dataframe
+                except:
+                    pass
+
+                if self.create_output:
+                    self.save()
+
                 time.sleep(2)
 
     def read_coords(self, ser) -> tuple[float]:
@@ -185,15 +208,5 @@ class GpsManager:
     
     def save(self):
         '''Writes the contents of the track dataframe to the track csv'''
-        if not self.create_output:
-            return
-
-        # Creates a new CSV path if it does not exist
-        if not self.csv_path:
-            date = datetime.today().strftime('%d%b%Y')
-            csv_name = f'{date}_track'
-            self.csv_path = os.path.join(self.output_dir, csv_name + '.csv')
-            if os.path.exists(self.csv_path):
-                self.csv_path = new_path(self.csv_path)
-        
-        self.track_df.to_csv(self.csv_path, index=False)
+        self.temp_track_df.to_csv(self.csv_path, mode='a', index=False, header=False)
+        self.temp_track_df = self.temp_track_df.iloc[0:0]
