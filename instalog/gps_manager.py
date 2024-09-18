@@ -118,9 +118,8 @@ class GpsManager:
         with serial.Serial(port=self.port, baudrate=self.baud_rate, timeout=1) as ser:
             while True:
                 self.coords = self.read_coords(ser)
-                row = [datetime.now().time().replace(microsecond=0),
-                    self.coords[0],
-                    self.coords[1]]
+                self.time = datetime.now().time().replace(microsecond=0)
+                row = [self.time, self.coords[0], self.coords[1]]
                 
                 try:
                     self.temp_track_df.loc[len(self.temp_track_df)] = row # Adding every coord read w/ timestamp to track dataframe
