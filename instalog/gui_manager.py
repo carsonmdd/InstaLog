@@ -249,10 +249,13 @@ class GuiManager(tk.Tk):
         self.reset_treeview()
         self.obs_csv_path = None
         self.saved = False
+        self.undo_stack.clear()
         data = {
             'status': False
         }
         self.callback('continue data', data)
+
+        self.viewer.focus_set()
 
     def load_csv(self):
         '''
@@ -264,8 +267,10 @@ class GuiManager(tk.Tk):
             if not self.loaded_csv_valid(filepath):
                 messagebox.showerror('Error', 'Invalid filename')
                 return
-            self.reset_treeview()
             with open(filepath) as file:
+                self.reset_treeview()
+                self.undo_stack.clear()
+
                 csvFile = csv.reader(file)
                 headers = next(csvFile)
                 if headers != list(self.col_widths.keys()):
@@ -299,8 +304,12 @@ class GuiManager(tk.Tk):
                     'date': date,
                     'counter': counter
                 }
-                self.save()
+                if self.saved:
+                    self.callback('save work before new')
                 self.callback('continue data', data)
+                self.save()
+
+                self.viewer.focus_set()
 
     def loaded_csv_valid(self, filepath) -> bool:
         '''Checks a few conditions to determine whether csv name is formatted correctly'''
@@ -399,7 +408,7 @@ class GuiManager(tk.Tk):
         '''Retrieves the necessary data, adds a row to the treeview, and updates the CSV'''
         species = self.species
         count = self.count
-        time = datetime.now().time().replace(microsecond=0)
+        time = self.callback('get time')
         obs = self.tree.num_observers
         comment = ''
         latitude, longitude = self.callback('get coords')

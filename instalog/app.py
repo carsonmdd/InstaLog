@@ -23,7 +23,7 @@ class InstaLogApp:
                               self.output_dir,
                               self.init_port_thread)
 
-        self.gui.protocol('WM_DELETE_WINDOW', lambda: (self.shapefile_gen.generate(), self.gui.destroy()))
+        self.gui.protocol('WM_DELETE_WINDOW', self.on_close)
                                                                                               
     def run(self):
         '''Run application'''
@@ -68,6 +68,12 @@ class InstaLogApp:
         if not self.output_dir:
             sys.exit()
 
+    def on_close(self):
+        '''Destroys gui and generates shapefiles in background'''
+        self.gui.destroy()
+        closing_thread = threading.Thread(target=self.shapefile_gen.generate)
+        closing_thread.start()
+
     def gui_callback(self, req, data=None):
         '''Callback function for GUI manager requests'''
         if req == 'get coords':
@@ -85,6 +91,8 @@ class InstaLogApp:
             self.shapefile_gen.generate()
         elif req == 'set coords':
             self.gps.set_coords(data['coords'])
+        elif req == 'get time':
+            return self.gps.get_time()
         else:
             return None
     
@@ -103,7 +111,7 @@ class InstaLogApp:
         '''Callback function for shapefile generator requests'''
         if req == 'get obs csv path':
             return self.gui.get_obs_csv_path()
-        elif req == 'get track df':
-            return self.gps.get_track_df()
+        elif req == 'get track csv path':
+            return self.gps.get_track_csv_path()
         else:
             return None

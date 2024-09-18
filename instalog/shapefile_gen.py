@@ -25,13 +25,14 @@ class ShapefileGenerator:
     def generate(self):
         '''Starts shapefile generation'''
         obs_csv_path = self.callback('get obs csv path')
-        track_df = self.callback('get track df')
+        track_csv_path = self.callback('get track csv path')
 
         # If nothing has been saved, csv_path will be "None", so terminate program
         if not obs_csv_path:
             return
         
         obs_df = pd.read_csv(obs_csv_path)
+        track_df = pd.read_csv(track_csv_path)
 
         self.add_obs_geometry(obs_df)
         self.add_track_geometry(track_df)
