@@ -20,9 +20,9 @@ Instalog is an intuitive and user-friendly offline data-logging app designed to 
     git clone -b windows https://github.com/carsonmdd/InstaLog.git
     ```
 2. Navigate to project directory
-```bash
-cd InstaLog
-```
+    ```bash
+    cd InstaLog
+    ```
 3. (Optional) Use a virtual environment to avoid installing dependencies globally.
 - Create a virtual environment:
     ```bash
@@ -38,9 +38,9 @@ cd InstaLog
         .venv/Scripts/activate
         ```
 4. Install the required dependencies
-```bash
-pip install -r requirements.txt
-```
+    ```bash
+    pip install -r requirements.txt
+    ```
 
 ## Usage
 ### Running the app
@@ -57,18 +57,18 @@ pip install -r requirements.txt
 3. In the settings.json file, ensure the baud_rate setting matches your GPS's baud rate.
 4. Connect the GPS to your computer via USB.
 5. Run the app:
-```bash
-python main.py
-```
+    ```bash
+    python main.py
+    ```
 
 #### macOS:
 1. Turn on your serial GPS device.
 2. In the settings.json file, ensure the baud_rate setting matches your GPS's baud rate.
 3. Connect the GPS to your computer via USB.
 4. Run the app:
-```bash
-python main.py
-```
+    ```bash
+    python main.py
+    ```
 
 ### Navigating the GUI
 - Create a new observations (obs) CSV with the "**New CSV**" button
