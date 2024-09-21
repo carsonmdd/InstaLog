@@ -12,22 +12,22 @@ Instalog is an intuitive and user-friendly offline data-logging app designed to 
 ## Installation
 1. Clone the repo
 - Clone the "main" branch for macOS:
-```bash
-git clone https://github.com/carsonmdd/InstaLog.git
-```
+    ```bash
+    git clone https://github.com/carsonmdd/InstaLog.git
+    ```
 - Clone the "windows" branch for Windows:
-```bash
-git clone -b windows https://github.com/carsonmdd/InstaLog.git
-```
+    ```bash
+    git clone -b windows https://github.com/carsonmdd/InstaLog.git
+    ```
 2. Navigate to project directory
 ```bash
 cd InstaLog
 ```
 3. (Optional) Use a virtual environment to avoid installing dependencies globally.
 - Create a virtual environment:
-```bash
-python -m venv .venv
-```
+    ```bash
+    python -m venv .venv
+    ```
 - Activate the virutal environment:
     - macOS:
         ```bash
@@ -71,12 +71,12 @@ python main.py
 ```
 
 ### Navigating the GUI
-- Create a new observations (obs) CSV with the **New CSV** button
-- Load an existing obs CSV with the **Load CSV** button
-- Delete the last row of the table with the **Delete last row** button
-- Revert the most recent add/delete row action with the **Undo** button
+- Create a new observations (obs) CSV with the "**New CSV**" button
+- Load an existing obs CSV with the "**Load CSV**" button
+- Delete the last row of the table with the "**Delete last row**" button
+- Revert the most recent add/delete row action with the "**Undo**" button
 - Log data by entering data in the Entry Viewer following the general format of a species name (or shortcut) followed by the count observed
-- The **Error Log** displays an error when coordinates cannot be read from the GPS
+- The "**Error Log**" displays an error when coordinates cannot be read from the GPS
 - Data can be directly edited in the table as well
 
 ### Output
