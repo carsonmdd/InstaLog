@@ -9,6 +9,10 @@ Instalog is an intuitive and user-friendly offline data-logging app designed to 
 - Simple and clean user interface
 - Windows and macOS support
 
+## Notes
+- Pyinstaller was used to bundle the app into a single executable for end users
+- See InstaLog's executables, user guide, and settings file here: (https://drive.google.com/drive/folders/11lNMJhH1kuCFg-K_dro7AFz68LBna3g-?usp=sharing)
+
 ## Installation
 1. Clone the repo
 - Clone the "main" branch for macOS:
