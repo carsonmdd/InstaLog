@@ -24,6 +24,7 @@ class GuiManager(tk.Tk):
         self.bind('<Map>', lambda event, w=self: self.center_window(w)) # Centering root immediately upon opening
         self.undo_stack = deque(maxlen=20)
         self.read_error_displayed = False
+        self.connection_error_displayed = False
         self.obs_csv_path = None
         self.saved = False
 
@@ -31,6 +32,7 @@ class GuiManager(tk.Tk):
         self.create_general_frame()
         self.create_widgets_frame()
         self.create_csv_tools()
+        self.create_other_tools()
         self.create_entry_viewer()
         self.create_error_panel()
         self.create_tree_frame()
@@ -39,10 +41,16 @@ class GuiManager(tk.Tk):
     def run(self):
         '''Runs the GUI'''
         self.withdraw() # Hide root while loading
-        self.create_loading_screen()
-        self.init_port_thread()
+        self.start_gps_search()
 
         self.mainloop()
+
+    def start_gps_search(self):
+        if self.connection_error_displayed:
+            self.clear_error('connection')
+
+        self.create_loading_screen()
+        self.init_port_thread()
 
     def center_window(self, window):
         '''Centers given window on screen (slightly higher than middle)'''
@@ -85,8 +93,12 @@ class GuiManager(tk.Tk):
         
         # If the result string isn't empty, there was an error
         if res:
-            messagebox.showerror('Error', res)
-            self.quit()
+            if res == 'Could not find a connected GPS':
+                self.show_error('No connected GPS', 'connection')
+                self.deiconify()
+            else:
+                messagebox.showerror('Error', res)
+                self.quit()
         # Else no error, so show the root
         else:
             self.deiconify()
@@ -110,12 +122,12 @@ class GuiManager(tk.Tk):
         '''Creates and configures frame for widgets'''
         self.widgets_frame = ttk.Frame(self.frame)
         self.widgets_frame.grid(row=0, column=0, padx=20, pady=10, sticky='nsew')
-        self.make_grid_resizable(self.widgets_frame, 3, 1)
+        self.make_grid_resizable(self.widgets_frame, 4, 1)
 
     def create_csv_tools(self):
         '''Creates CSV widgets'''
         self.csv_frame = ttk.LabelFrame(self.widgets_frame, text='CSV Tools', labelanchor='n')
-        self.csv_frame.grid(row=0, column=0, pady=10, sticky='nsew')
+        self.csv_frame.grid(row=0, column=0, pady=(0, 10), sticky='nsew')
         self.make_grid_resizable(self.csv_frame, 1, 1)
 
         self.csv_widgets_frame = ttk.Frame(self.csv_frame)
@@ -137,10 +149,23 @@ class GuiManager(tk.Tk):
         self.undo_button = ttk.Button(self.csv_widgets_frame, text='Undo', command=self.undo)
         self.undo_button.grid(row=4, column=0, padx=15, pady=(0, 15), sticky='nsew')
 
+    def create_other_tools(self):
+        '''Creates other widgets'''
+        self.other_frame = ttk.LabelFrame(self.widgets_frame, text='Other Tools', labelanchor='n')
+        self.other_frame.grid(row=1, column=0, pady=(0, 10), sticky='nsew')
+        self.make_grid_resizable(self.other_frame, 1, 1)
+
+        self.other_widgets_frame = ttk.Frame(self.other_frame)
+        self.other_widgets_frame.grid(row=0, column=0, sticky='nsew')
+        self.make_grid_resizable(self.other_widgets_frame, 1, 1)
+        
+        self.connect_gps_button = ttk.Button(self.other_widgets_frame, text='Connect GPS', command=self.start_gps_search)
+        self.connect_gps_button.grid(row=0, column=0, padx=15, pady=15, sticky='nsew')
+
     def create_entry_viewer(self):
         '''Creates entry viewer'''
         self.viewer_labelframe = ttk.LabelFrame(self.widgets_frame, text='Entry Viewer', labelanchor='n')
-        self.viewer_labelframe.grid(row=1, column=0, pady=(0, 100), sticky='nsew')
+        self.viewer_labelframe.grid(row=2, column=0, pady=(0, 100), sticky='nsew')
         self.make_grid_resizable(self.viewer_labelframe, 1, 1)
 
         self.viewer_frame = ttk.Frame(self.viewer_labelframe)
@@ -155,7 +180,7 @@ class GuiManager(tk.Tk):
     def create_error_panel(self):
         '''Creates error panel'''
         self.error_labelframe = ttk.LabelFrame(self.widgets_frame, text='Error Log', labelanchor='n')
-        self.error_labelframe.grid(row=2, column=0, pady=(0, 10), sticky='nsew')
+        self.error_labelframe.grid(row=3, column=0, pady=(0, 10), sticky='nsew')
         self.make_grid_resizable(self.error_labelframe, 1, 1)
 
         self.error_frame = ttk.Frame(self.error_labelframe)
@@ -168,15 +193,21 @@ class GuiManager(tk.Tk):
                                      anchor='center')
         self.error_label.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
 
-    def show_error(self, message):
+    def show_error(self, message, type):
         '''Displays an error in the error panel'''
         self.error_label.config(text=message, background='red')
-        self.read_error_displayed = True
+        if type == 'read':
+            self.read_error_displayed = True
+        elif type == 'connection':
+            self.connection_error_displayed = True
 
-    def clear_errors(self):
+    def clear_error(self, type):
         '''Clears the errors in the error panel'''
         self.error_label.config(text='', background='white')
-        self.read_error_displayed = False
+        if type == 'read':
+            self.read_error_displayed = False
+        elif type == 'connection':
+            self.connection_error_displayed = False
 
     def create_tree_frame(self):
         '''Creates and configures the treeview frame'''
@@ -370,7 +401,7 @@ class GuiManager(tk.Tk):
         # If text could not be broken up...
         if species == '':
             species = text.strip()
-            count = '0'
+            count = '1'
 
         # .upper because all shortcuts are uppercase
         if species.upper() in self.shortcuts:

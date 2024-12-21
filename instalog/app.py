@@ -96,14 +96,14 @@ class InstaLogApp:
         else:
             return None
     
-    def gps_callback(self, req):
+    def gps_callback(self, req, data=None):
         '''Callback function for GPS manager requests'''
         if req == 'clear errors':
-            self.gui.clear_errors()
+            self.gui.clear_error(data['type'])
         elif req == 'has read error':
             return self.gui.has_read_error()
         elif req == 'show read error':
-            self.gui.show_error('Can\'t read from GPS')
+            self.gui.show_error('Can\'t read from GPS', 'read')
         else:
             return None
         
