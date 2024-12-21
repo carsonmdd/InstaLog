@@ -144,7 +144,7 @@ class GpsManager:
         while time.time() - start_time < 5:
             num_types = sum(element != None for element in self.sentence_types)
             line = ser.readline().decode('utf-8', errors='replace')
-            if line.startswith(self.sentence_types[0]):
+            if self.sentence_types[0] and line.startswith(self.sentence_types[0]):
                 # Ex: $GPGGA,123519.00,4807.038,N,01131.000,E,1,08,0.9,545.4,M,46.9,M,,*47
                 parts = line.split(',')
                 try: # Use try-except for cases where sentence is incomplete
@@ -152,7 +152,7 @@ class GpsManager:
                         lat, lon = self.ddm2dd(((parts[2], parts[3]), (parts[4], parts[5])))
                         self.coords = (lat, lon)
                         if self.callback('has read error'):
-                            self.callback('clear errors')
+                            self.callback('clear error', {'type': 'read'})
                     break
                 except:
                     pass
@@ -164,7 +164,7 @@ class GpsManager:
                         lat, lon = self.ddm2dd(((parts[3], parts[4]), (parts[5], parts[6])))
                         self.coords = (lat, lon)
                         if self.callback('has read error'):
-                            self.callback('clear errors')
+                            self.callback('clear error', {'type': 'read'})
                     break
                 except:
                     pass
@@ -176,7 +176,7 @@ class GpsManager:
                         lat, lon = self.ddm2dd(((parts[1], parts[2]), (parts[3], parts[4])))
                         self.coords = (lat, lon)
                         if self.callback('has read error'):
-                            self.callback('clear errors')
+                            self.callback('clear error', {'type': 'read'})
                     break
                 except:
                     pass
